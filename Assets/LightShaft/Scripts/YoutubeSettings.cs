@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -2434,7 +2434,7 @@ namespace LightShaft.Scripts
             {
                 SetMasterUrlForVideo(r);
 #if UNITY_WEBGL
-            DoRegexFunctionsForVideo(r);
+            DoRegexFunctionsForAudio(r);
 #else
 
                 if (SystemInfo.processorCount > 1)

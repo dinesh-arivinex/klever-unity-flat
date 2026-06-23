@@ -105,11 +105,10 @@
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.voice": {
-      "version": "71.0.0",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://packages.unity.com"
+      "version": "file:com.meta.xr.sdk.voice",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
     },
     "com.meta.xr.simulator": {
       "version": "72.0.0",
