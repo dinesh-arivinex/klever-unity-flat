@@ -108,10 +108,13 @@ public class WebManager : MonoBehaviour
             if (firstTime)
             {
                 ChangeSkyBox.SetSkybox(ChangeSkyBox.skyBoxMaterialNew[ChangeClassRoom.Instance.classRoom]);
-                GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(true);
+                if (GamificationControllerHandSwitcher.Instance != null)
+                {
+                    if (GamificationControllerHandSwitcher.Instance.leftHandRaycast != null) GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(true);
+                    if (GamificationControllerHandSwitcher.Instance.rightHandRaycast != null) GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(true);
+                    if (GamificationControllerHandSwitcher.Instance.leftControllerRaycast != null) GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(true);
+                    if (GamificationControllerHandSwitcher.Instance.rightControllerRaycast != null) GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(true);
+                }
                 canvasWebViewLoader.SetupWebView(url);
                 simulation.transform.position = temp.transform.position;
                 simulation.transform.rotation = temp.transform.rotation;
