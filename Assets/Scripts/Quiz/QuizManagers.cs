@@ -1,4 +1,4 @@
-using Oculus.Interaction;
+// using Oculus.Interaction;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -23,7 +23,7 @@ public class QuizManagers : MonoBehaviour
     public GameObject elementWantToDelete;
     private int MCQstudetScore=0;
     private GamificationManager gamificationManager;
-    public List<InteractableUnityEventWrapper> interactableWrappers = new List<InteractableUnityEventWrapper>();
+    // public List<InteractableUnityEventWrapper> interactableWrappers = new List<InteractableUnityEventWrapper>();
     public AudioSource audioSource;
 
 
@@ -200,8 +200,8 @@ public class QuizManagers : MonoBehaviour
         {
             if (i < answerOptions.Count)
             {
-                var wrappers = answerButtons[i].GetComponents<InteractableUnityEventWrapper>();
-                interactableWrappers.AddRange(wrappers);
+                // var wrappers = answerButtons[i].GetComponents<InteractableUnityEventWrapper>();
+                // interactableWrappers.AddRange(wrappers);
                 if (answerButtons[i] != null)
                 {
                     answerButtons[i].gameObject.SetActive(true);
@@ -220,7 +220,7 @@ public class QuizManagers : MonoBehaviour
 
                     int answerIndex = i;
                     answerButtons[i].onClick.AddListener(() => OnAnswerClick(answerIndex));
-                    interactableWrappers[i].WhenSelect.AddListener(() => OnAnswerClick(answerIndex));
+                    // interactableWrappers[i].WhenSelect.AddListener(() => OnAnswerClick(answerIndex));
                 }
                 
             }

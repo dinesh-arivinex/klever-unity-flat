@@ -15,6 +15,10 @@ public class InternetSpeedTest : MonoBehaviour
 
     IEnumerator TestInternetSpeed()
     {
+#if UNITY_WEBGL
+        speedText.text = "Ping not supported on WebGL";
+        yield break;
+#else
         while (true)
         {
             float latency = 0f;
@@ -42,5 +46,6 @@ public class InternetSpeedTest : MonoBehaviour
 
             yield return new WaitForSeconds(5f); // Wait for 5 seconds before testing again
         }
+#endif
     }
 }

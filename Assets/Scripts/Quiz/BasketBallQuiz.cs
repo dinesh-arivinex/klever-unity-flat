@@ -1,5 +1,5 @@
 using LibTessDotNet;
-using Oculus.Interaction;
+// using Oculus.Interaction;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -27,7 +27,7 @@ public class BasketBallQuiz : MonoBehaviour
     public bool isArrow;
     private int basketballScore;
     private int arrowScore;
-    private List<InteractableUnityEventWrapper> interactableWrappers = new List<InteractableUnityEventWrapper>();
+    // private List<InteractableUnityEventWrapper> interactableWrappers = new List<InteractableUnityEventWrapper>();
     [System.Serializable]
     private class Wrapper
     {
@@ -196,8 +196,8 @@ public class BasketBallQuiz : MonoBehaviour
         {
             if (i < answerOptions.Count)
             {
-                var wrappers = answerButtons[i].GetComponents<InteractableUnityEventWrapper>();
-                interactableWrappers.AddRange(wrappers);
+                // var wrappers = answerButtons[i].GetComponents<InteractableUnityEventWrapper>();
+                // interactableWrappers.AddRange(wrappers);
 
                 if (answerButtons[i] != null)
                 {
@@ -218,7 +218,7 @@ public class BasketBallQuiz : MonoBehaviour
                     int answerIndex = i;
                     answerButtons[i].onClick.AddListener(() => OnAnswerClick(answerIndex));
 
-                    interactableWrappers[i].WhenSelect.AddListener(() => OnAnswerClick(answerIndex));
+                    // interactableWrappers[i].WhenSelect.AddListener(() => OnAnswerClick(answerIndex));
 
                 }
                 else

@@ -1,4 +1,4 @@
-using Oculus.Interaction;
+// using Oculus.Interaction;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -19,8 +19,8 @@ public class Ontrigger : MonoBehaviour
     private bool isBasketBall;
     public bool isEntered;
     private GamificationController gamificationController;
-    //public InputActionReference inputActionController;
-    public OVRInput.RawButton inputActionController;
+    public InputActionReference inputActionController;
+    //public OVRInput.RawButton inputActionController;
     [Header("Basket Ball details")]
     public AudioSource BasketBallAudioClip;
     public GameObject basketBall;
@@ -33,7 +33,7 @@ public class Ontrigger : MonoBehaviour
     public GameObject arrowVisualizeHandMode;
     private  GamificationManager  gamificationManager;
     public BasketBallQuiz gameType;
-    public InteractableUnityEventWrapper interactableEvents;
+    // public InteractableUnityEventWrapper interactableEvents;
     private bool wasHandSelected = false;
     private bool isCursorHandInside = false;
 
@@ -44,10 +44,10 @@ public class Ontrigger : MonoBehaviour
         optionSelection =FindObjectOfType<GamificationController>();
         GamificationController.isGamefication=true;
 
-        if (interactableEvents != null)
+        /*if (interactableEvents != null)
         {
             interactableEvents.WhenSelect.AddListener(OnHandSelect); // CHANGED
-        }
+        }*/
     }
 
     public void ArrowTouchSpawn()
@@ -74,7 +74,7 @@ public class Ontrigger : MonoBehaviour
                     GamificationController.isGamefication  = false;
                     StartSpawning();
                 }
-                if (OVRInput.GetDown(inputActionController)) // build mode Controller
+                if (inputActionController != null && inputActionController.action.WasPressedThisFrame()) // build mode Controller
                 {
                     GamificationController.isGamefication = false;
                     StartSpawning();

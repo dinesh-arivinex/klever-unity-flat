@@ -1,4 +1,4 @@
-using Oculus.Interaction;
+// using Oculus.Interaction;
 using SimpleJSON;
 using System;
 using System.Collections;
@@ -438,12 +438,12 @@ public class AnnotationManager : MonoBehaviour
         canvas.worldCamera = Camera.main;
         Button[] buttons = canvas.GetComponentsInChildren<Button>();
         Transform canvasChild = cubeButton.transform.GetChild(0);
-        InteractableUnityEventWrapper[] interactableWrappers = canvas.GetComponentsInChildren<InteractableUnityEventWrapper>();
+        // InteractableUnityEventWrapper[] interactableWrappers = canvas.GetComponentsInChildren<InteractableUnityEventWrapper>();
 
-        for (int i = 0; i < buttons.Length && i < interactableWrappers.Length; i++)
+        for (int i = 0; i < buttons.Length /*&& i < interactableWrappers.Length*/; i++)
         {
             Button button = buttons[i];
-            InteractableUnityEventWrapper interactableWrapper = interactableWrappers[i];
+            // InteractableUnityEventWrapper interactableWrapper = interactableWrappers[i];
 
             TextMeshProUGUI buttonText = button.GetComponentInChildren<TextMeshProUGUI>();
             if (buttonText != null)
@@ -452,7 +452,7 @@ public class AnnotationManager : MonoBehaviour
             }
 
             button.onClick.AddListener(() => OnButtonClick(annotationText, heading));
-            interactableWrapper.WhenSelect.AddListener(() => OnSelect(annotationText, heading));
+            // interactableWrapper.WhenSelect.AddListener(() => OnSelect(annotationText, heading));
         }
         tempCube.Add(newcubeButton);
         SettingCubeDistance(newcubeButton);
