@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using SimpleJSON;
+#if !UNITY_WEBGL || UNITY_EDITOR
 using uPLibrary.Networking.M2Mqtt;
+#endif
 using UnityEngine;
 
 namespace Klass.Net
@@ -45,7 +47,9 @@ namespace Klass.Net
         public event Action<JSONNode> OnBroadcast;      // payload of broadcast
 
         // ── Internals ──────────────────────────────────────────────────────
+#if !UNITY_WEBGL || UNITY_EDITOR
         private MqttClient _client;
+#endif
         private MqttCredentialsFetcher.Credentials _creds;
         private readonly ConcurrentQueue<Action> _mainThread = new ConcurrentQueue<Action>();
         private readonly object _lock = new object();
@@ -53,6 +57,9 @@ namespace Klass.Net
         private bool _wantConnected;
         private Coroutine _reconnectLoop;
         private Coroutine _refreshLoop;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private int _webGlConnectResult;
+#endif
 
         void Awake()
         {
@@ -180,7 +187,11 @@ namespace Klass.Net
             try
             {
                 var bytes = Encoding.UTF8.GetBytes(body == null ? "{}" : body.ToString());
+#if UNITY_WEBGL && !UNITY_EDITOR
+                WebGlMqttTransport.KleverMqttPublish(topic, Encoding.UTF8.GetString(bytes), qos, retain ? 1 : 0);
+#else
                 _client.Publish(topic, bytes, qos, retain);
+#endif
             }
             catch (Exception ex)
             {
@@ -227,11 +238,15 @@ namespace Klass.Net
                 DeviceId = _creds.DeviceId;
             }
 
-            // 2. open TCP connection
+            // 2. Open the transport advertised by the credential endpoint.
+#if UNITY_WEBGL && !UNITY_EDITOR
+            yield return ConnectWebGlOnce();
+            if (!IsConnected) yield break;
+#else
             try
             {
-                var sslProtocol = KlassEndpoints.MqttUseTls ? MqttSslProtocols.TLSv1_2 : MqttSslProtocols.None;
-                _client = new MqttClient(KlassEndpoints.MqttHost, KlassEndpoints.MqttPort, KlassEndpoints.MqttUseTls,
+                var sslProtocol = _creds.BrokerUseTls ? MqttSslProtocols.TLSv1_2 : MqttSslProtocols.None;
+                _client = new MqttClient(_creds.BrokerHost, _creds.BrokerPort, _creds.BrokerUseTls,
                     null, null, sslProtocol);
                 SubscribeMqttPublish(_client);
                 _client.ConnectionClosed += HandleConnectionClosed;
@@ -260,16 +275,22 @@ namespace Klass.Net
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[KlassMqtt] connect threw: {ex.GetType().Name}: {ex.Message} (host={KlassEndpoints.MqttHost}:{KlassEndpoints.MqttPort} tls={KlassEndpoints.MqttUseTls})");
+                Debug.LogWarning($"[KlassMqtt] connect threw: {ex.GetType().Name}: {ex.Message} (host={_creds.BrokerHost}:{_creds.BrokerPort} tls={_creds.BrokerUseTls})");
                 SafeDisconnect();
                 yield break;
             }
 
             IsConnected = true;
+#endif
 
             // 3. Subscribe to commands & session topics
             try
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                WebGlMqttTransport.KleverMqttSubscribe(MqttTopics.Cmd(SchoolId, DeviceId), 1);
+                WebGlMqttTransport.KleverMqttSubscribe(MqttTopics.SessionControl(SchoolId), 1);
+                WebGlMqttTransport.KleverMqttSubscribe(MqttTopics.Broadcast(SchoolId), 1);
+#else
                 _client.Subscribe(
                     new[] {
                         MqttTopics.Cmd(SchoolId, DeviceId),
@@ -277,6 +298,7 @@ namespace Klass.Net
                         MqttTopics.Broadcast(SchoolId),
                     },
                     new[] { (byte)1, (byte)1, (byte)1 });
+#endif
             }
             catch (Exception ex)
             {
@@ -289,9 +311,7 @@ namespace Klass.Net
                 var online = new JSONObject();
                 online["online"] = true;
                 online["ts"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-                _client.Publish(MqttTopics.Status(SchoolId, DeviceId),
-                    Encoding.UTF8.GetBytes(online.ToString()),
-                    (byte)1, /*retain*/ true);
+                PublishJson(MqttTopics.Status(SchoolId, DeviceId), online, retain: true, qos: 1);
             }
             catch (Exception ex) { Debug.LogWarning($"[KlassMqtt] presence publish failed: {ex.Message}"); }
 
@@ -319,6 +339,64 @@ namespace Klass.Net
             }
         }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private IEnumerator ConnectWebGlOnce()
+        {
+            if (!Uri.TryCreate(_creds.BrokerWsUrl, UriKind.Absolute, out var brokerUri) ||
+                (brokerUri.Scheme != "ws" && brokerUri.Scheme != "wss"))
+            {
+                Debug.LogWarning("[KlassMqtt] invalid brokerWsUrl from credential endpoint");
+                yield break;
+            }
+
+            _webGlConnectResult = 0;
+            var will = "{\"online\":false,\"ts\":0}";
+            WebGlMqttTransport.KleverMqttConnect(
+                gameObject.name, _creds.BrokerWsUrl, _creds.Username, _creds.Password,
+                _creds.ClientId, MqttTopics.Status(SchoolId, DeviceId), will,
+                Mathf.Max(1, _creds.KeepaliveSeconds));
+
+            var timeoutAt = Time.realtimeSinceStartup + 15f;
+            while (_webGlConnectResult == 0 && Time.realtimeSinceStartup < timeoutAt)
+                yield return null;
+
+            if (_webGlConnectResult != 1)
+            {
+                Debug.LogWarning("[KlassMqtt] WebGL MQTT connection failed or timed out");
+                WebGlMqttTransport.KleverMqttDisconnect();
+                yield break;
+            }
+            IsConnected = true;
+        }
+
+        // Called by KleverMqtt.jslib on Unity's main thread.
+        public void OnKleverMqttWebGlConnected(string _) => _webGlConnectResult = 1;
+        public void OnKleverMqttWebGlConnectFailed(string reason)
+        {
+            Debug.LogWarning($"[KlassMqtt] WebGL broker refused connection: {reason}");
+            _webGlConnectResult = -1;
+        }
+        public void OnKleverMqttWebGlDisconnected(string _)
+        {
+            if (!IsConnected) return;
+            IsConnected = false;
+            OnDisconnected?.Invoke();
+        }
+        public void OnKleverMqttWebGlMessage(string envelope)
+        {
+            try
+            {
+                var json = JSONNode.Parse(envelope);
+                DispatchIncomingMessage(json?["topic"]?.Value, json?["payload"]?.Value);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[KlassMqtt] WebGL message parse failed: {ex.Message}");
+            }
+        }
+#endif
+
+#if !UNITY_WEBGL || UNITY_EDITOR
         private void SubscribeMqttPublish(MqttClient client)
         {
             try
@@ -372,7 +450,14 @@ namespace Klass.Net
         {
             try
             {
-                EnqueueMain(() => { IsConnected = false; OnDisconnected?.Invoke(); });
+                EnqueueMain(() =>
+                {
+                    // A close from a retired connection must not mark a newer
+                    // successfully reconnected client as offline.
+                    if (!ReferenceEquals(sender, _client)) return;
+                    IsConnected = false;
+                    OnDisconnected?.Invoke();
+                });
             }
             catch (Exception ex)
             {
@@ -396,15 +481,7 @@ namespace Klass.Net
                 byte[] msgBytes = msgProp.GetValue(e) as byte[];
                 string payload = msgBytes != null ? Encoding.UTF8.GetString(msgBytes) : "";
 
-                EnqueueMain(() =>
-                {
-                    JSONNode node = null;
-                    try { node = JSONNode.Parse(payload); } catch { /* not JSON */ }
-
-                    if (topic == MqttTopics.SessionControl(SchoolId))      OnSessionControl?.Invoke(node);
-                    else if (topic == MqttTopics.Broadcast(SchoolId))      OnBroadcast?.Invoke(node);
-                    else if (topic == MqttTopics.Cmd(SchoolId, DeviceId))  OnCommand?.Invoke(node);
-                });
+                EnqueueMain(() => DispatchIncomingMessage(topic, payload));
             }
             catch (Exception ex)
             {
@@ -412,7 +489,24 @@ namespace Klass.Net
                 Debug.LogWarning($"[KlassMqtt] HandleIncomingMessage exception: {ex.Message}");
             }
         }
+#endif
 
+        private void DispatchIncomingMessage(string topic, string payload)
+        {
+            JSONNode node = null;
+            try { node = JSONNode.Parse(payload); } catch { /* not JSON */ }
+
+            if (topic == MqttTopics.SessionControl(SchoolId)) OnSessionControl?.Invoke(node);
+            else if (topic == MqttTopics.Broadcast(SchoolId)) OnBroadcast?.Invoke(node);
+            else if (topic == MqttTopics.Cmd(SchoolId, DeviceId)) OnCommand?.Invoke(node);
+        }
+
+ #if UNITY_WEBGL && !UNITY_EDITOR
+        private void CleanupClient()
+        {
+            WebGlMqttTransport.KleverMqttDisconnect();
+        }
+#else
         private void CleanupClient(MqttClient client)
         {
             if (client == null) return;
@@ -437,19 +531,28 @@ namespace Klass.Net
             }
             catch { /* swallow */ }
         }
+#endif
 
         private void DisconnectInternal(string reason)
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            CleanupClient();
+#else
             CleanupClient(_client);
             _client = null;
+#endif
             IsConnected = false;
             Debug.Log($"[KlassMqtt] disconnected: {reason}");
         }
 
         private void SafeDisconnect()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            CleanupClient();
+#else
             CleanupClient(_client);
             _client = null;
+#endif
             IsConnected = false;
         }
 

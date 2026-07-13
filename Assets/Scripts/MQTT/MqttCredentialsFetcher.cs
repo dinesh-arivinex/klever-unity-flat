@@ -17,6 +17,9 @@ namespace Klass.Net
         {
             public string BrokerWsUrl;
             public string BrokerTcpUrl;
+            public string BrokerHost;
+            public int    BrokerPort;
+            public bool   BrokerUseTls;
             public string Username;
             public string Password;
             public string ClientId;
@@ -102,6 +105,20 @@ namespace Klass.Net
                     onFailure?.Invoke("malformed username from credential endpoint");
                     yield break;
                 }
+
+                if (!Uri.TryCreate(c.BrokerTcpUrl, UriKind.Absolute, out var brokerUri) ||
+                    (brokerUri.Scheme != "mqtt" && brokerUri.Scheme != "mqtts") ||
+                    string.IsNullOrEmpty(brokerUri.Host))
+                {
+                    onFailure?.Invoke("invalid brokerTcpUrl from credential endpoint");
+                    yield break;
+                }
+
+                c.BrokerHost = brokerUri.Host;
+                c.BrokerUseTls = brokerUri.Scheme == "mqtts";
+                c.BrokerPort = brokerUri.IsDefaultPort
+                    ? (c.BrokerUseTls ? 8883 : 1883)
+                    : brokerUri.Port;
                 onSuccess?.Invoke(c);
             }
         }
