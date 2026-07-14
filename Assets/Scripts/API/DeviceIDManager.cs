@@ -10,6 +10,7 @@ public class DevideIDRegistraction
 {
     public string deviceID;
     public string schoolID;
+    public string platform;
 
   
 }
@@ -136,6 +137,11 @@ public class DeviceIDManager : MonoBehaviour
      
         registration.deviceID = deviceID;
         registration.schoolID = inputText.text;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        registration.platform = "webgl";
+#else
+        registration.platform = "vr";
+#endif
         string mydate = JsonUtility.ToJson(registration);
       StartCoroutine(WebPostResponse(Klass.Net.KlassEndpoints.V1("devices"), mydate));
 

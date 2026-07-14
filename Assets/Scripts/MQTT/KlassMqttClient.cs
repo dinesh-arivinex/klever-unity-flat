@@ -40,6 +40,18 @@ namespace Klass.Net
         public string SchoolId  { get; private set; }
         public string DeviceId  { get; private set; }
 
+        private static string RuntimePlatformName
+        {
+            get
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                return "webgl";
+#else
+                return "vr";
+#endif
+            }
+        }
+
         // ── Public events (always fired on Unity main thread) ──────────────
         public event Action OnConnected;
         public event Action OnDisconnected;
@@ -122,6 +134,7 @@ namespace Klass.Net
             node["isActive"]    = isActive;
             node["isSynced"]    = isSynced;
             node["isCompleted"] = isCompleted;
+            node["platform"]    = RuntimePlatformName;
             if (!string.IsNullOrEmpty(playState))    node["playState"]    = playState;
             if (!string.IsNullOrEmpty(experienceId)) node["experienceId"] = experienceId;
             node["ts"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
@@ -142,6 +155,7 @@ namespace Klass.Net
             node["isActive"]         = isActive;
             node["isSynced"]         = isSynced;
             node["isCompleted"]      = isCompleted;
+            node["platform"]         = RuntimePlatformName;
             node["downloadProgress"] = Mathf.Clamp(downloadProgress, 0, 100);
             if (!string.IsNullOrEmpty(playState))    node["playState"]    = playState;
             if (!string.IsNullOrEmpty(experienceId)) node["experienceId"] = experienceId;
@@ -166,6 +180,7 @@ namespace Klass.Net
             node["isActive"]         = true;
             node["isSynced"]         = false;
             node["isCompleted"]      = false;
+            node["platform"]         = RuntimePlatformName;
             node["downloadProgress"] = 0;
             node["playState"]        = "idle";
             node["downloadError"]    = string.IsNullOrEmpty(errorMessage) ? "Unknown download error" : errorMessage;
@@ -319,6 +334,7 @@ namespace Klass.Net
             {
                 var online = new JSONObject();
                 online["online"] = true;
+                online["platform"] = RuntimePlatformName;
                 online["ts"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
                 PublishJson(MqttTopics.Status(SchoolId, DeviceId), online, retain: true, qos: 1);
             }

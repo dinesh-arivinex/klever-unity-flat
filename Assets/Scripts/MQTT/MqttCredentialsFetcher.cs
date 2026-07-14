@@ -47,6 +47,11 @@ namespace Klass.Net
                 req.SetRequestHeader("Accept", "application/json");
                 req.SetRequestHeader("Cache-Control", "no-store");
                 req.SetRequestHeader("device-id", SystemInfo.deviceUniqueIdentifier);
+#if UNITY_WEBGL && !UNITY_EDITOR
+                req.SetRequestHeader("x-device-platform", "webgl");
+#else
+                req.SetRequestHeader("x-device-platform", "vr");
+#endif
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
