@@ -1,5 +1,8 @@
 mergeInto(LibraryManager.library, {
   KleverMqttConnect: function (objectPtr, urlPtr, usernamePtr, passwordPtr, clientIdPtr, willTopicPtr, willPayloadPtr, keepalive) {
+    var generation = (window.KleverMqttGeneration || 0) + 1;
+    window.KleverMqttGeneration = generation;
+    if (window.KleverMqttBridge && window.KleverMqttBridge.disconnect) window.KleverMqttBridge.disconnect(false);
     var objectName = UTF8ToString(objectPtr);
     var url = UTF8ToString(urlPtr);
     var username = UTF8ToString(usernamePtr);
@@ -12,8 +15,16 @@ mergeInto(LibraryManager.library, {
     var packetId = 1;
     var socket;
     var pingTimer;
+    var connectTimer;
+    var retryTimer;
+    var awaitingPing = false;
+    var connected = false;
+    var pendingPublishes = {};
 
-    function notify(method, value) { SendMessage(objectName, method, value || ''); }
+    function notify(method, value) {
+      if (window.KleverMqttGeneration !== generation) return;
+      SendMessage(objectName, method, value || '');
+    }
     function join(parts) {
       var length = parts.reduce(function (sum, part) { return sum + part.length; }, 0);
       var result = new Uint8Array(length);
@@ -22,18 +33,28 @@ mergeInto(LibraryManager.library, {
       return result;
     }
     function u16(value) { return new Uint8Array([(value >> 8) & 255, value & 255]); }
-    function text(value) { var bytes = encoder.encode(value); return join([u16(bytes.length), bytes]); }
+    function text(value) {
+      var bytes = encoder.encode(value);
+      if (bytes.length > 65535) throw new Error('MQTT string exceeds 65535 bytes');
+      return join([u16(bytes.length), bytes]);
+    }
     function remainingLength(value) {
       var bytes = [];
       do { var digit = value % 128; value = Math.floor(value / 128); if (value > 0) digit |= 128; bytes.push(digit); } while (value > 0);
       return new Uint8Array(bytes);
     }
     function packet(header, body) { return join([new Uint8Array([header]), remainingLength(body.length), body]); }
-    function send(bytes) { if (socket && socket.readyState === WebSocket.OPEN) socket.send(bytes); }
+    function send(bytes) {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+      socket.send(bytes);
+      return true;
+    }
     function nextId() { packetId = packetId >= 65535 ? 1 : packetId + 1; return packetId; }
     function connectPacket() {
-      // MQTT 3.1.1, persistent session, username/password, retained QoS1 LWT.
-      var flags = 0xEC;
+      // MQTT 3.1.1, clean session, username/password, retained QoS1 LWT.
+      // Credentials contain a unique client id, so retaining abandoned sessions
+      // would leak broker resources without providing delivery guarantees.
+      var flags = 0xEE;
       var variableHeader = join([text('MQTT'), new Uint8Array([4, flags]), u16(Math.max(1, keepalive || 30))]);
       var payload = join([text(clientId), text(willTopic), text(willPayload), text(username), text(password)]);
       return packet(0x10, join([variableHeader, payload]));
@@ -55,6 +76,8 @@ mergeInto(LibraryManager.library, {
         var type = header >> 4;
         if (type === 2) {
           if (body.length < 2 || body[1] !== 0) { notify('OnKleverMqttWebGlConnectFailed', String(body.length > 1 ? body[1] : -1)); socket.close(); return; }
+          connected = true;
+          if (connectTimer) clearTimeout(connectTimer);
           notify('OnKleverMqttWebGlConnected', '');
         } else if (type === 3) {
           if (body.length < 2) continue;
@@ -64,22 +87,65 @@ mergeInto(LibraryManager.library, {
           var topic = decoder.decode(body.slice(2, 2 + topicLength));
           if (qos > 0) { if (index + 2 > body.length) continue; var publishId = (body[index] << 8) | body[index + 1]; index += 2; send(new Uint8Array([0x40, 0x02, (publishId >> 8) & 255, publishId & 255])); }
           notify('OnKleverMqttWebGlMessage', JSON.stringify({ topic: topic, payload: decoder.decode(body.slice(index)) }));
+        } else if (type === 4 && body.length === 2) {
+          delete pendingPublishes[(body[0] << 8) | body[1]];
+        } else if (type === 13) {
+          awaitingPing = false;
         }
       }
     }
-    if (window.KleverMqttBridge && window.KleverMqttBridge.disconnect) window.KleverMqttBridge.disconnect(false);
-    socket = new WebSocket(url, ['mqtt']);
+    socket = new WebSocket(url, 'mqtt');
     socket.binaryType = 'arraybuffer';
     socket.onopen = function () { send(connectPacket()); };
     socket.onmessage = handleMessage;
-    socket.onerror = function () { notify('OnKleverMqttWebGlConnectFailed', 'websocket error'); };
-    socket.onclose = function () { if (pingTimer) clearInterval(pingTimer); notify('OnKleverMqttWebGlDisconnected', ''); };
+    socket.onerror = function () { if (!connected) notify('OnKleverMqttWebGlConnectFailed', 'websocket error'); };
+    socket.onclose = function () {
+      if (pingTimer) clearInterval(pingTimer);
+      if (retryTimer) clearInterval(retryTimer);
+      if (connectTimer) clearTimeout(connectTimer);
+      if (!connected) notify('OnKleverMqttWebGlConnectFailed', 'websocket closed before CONNACK');
+      else notify('OnKleverMqttWebGlDisconnected', '');
+      connected = false;
+    };
     window.KleverMqttBridge = {
       subscribe: function (topic, qos) { var id = nextId(); send(packet(0x82, join([u16(id), text(topic), new Uint8Array([qos || 0])]))); },
-      publish: function (topic, payload, qos, retain) { var level = qos || 0; var id = level > 0 ? u16(nextId()) : new Uint8Array(); send(packet(0x30 | (retain ? 1 : 0) | (level << 1), join([text(topic), id, encoder.encode(payload)]))); },
-      disconnect: function (announce) { if (socket && socket.readyState === WebSocket.OPEN) { send(new Uint8Array([0xE0, 0x00])); socket.close(); } if (announce) notify('OnKleverMqttWebGlDisconnected', ''); }
+      publish: function (topic, payload, qos, retain) {
+        var level = qos === 1 ? 1 : 0;
+        var numericId = level > 0 ? nextId() : 0;
+        var id = level > 0 ? u16(numericId) : new Uint8Array();
+        var bytes = packet(0x30 | (retain ? 1 : 0) | (level << 1), join([text(topic), id, encoder.encode(payload)]));
+        if (level > 0) pendingPublishes[numericId] = { bytes: bytes, sentAt: Date.now(), attempts: 1 };
+        send(bytes);
+      },
+      disconnect: function (announce) {
+        if (pingTimer) clearInterval(pingTimer);
+        if (retryTimer) clearInterval(retryTimer);
+        if (connectTimer) clearTimeout(connectTimer);
+        if (socket && socket.readyState === WebSocket.OPEN) { send(new Uint8Array([0xE0, 0x00])); socket.close(); }
+        if (announce) notify('OnKleverMqttWebGlDisconnected', '');
+      }
     };
-    pingTimer = setInterval(function () { send(new Uint8Array([0xC0, 0x00])); }, Math.max(1, keepalive || 30) * 500);
+    connectTimer = setTimeout(function () {
+      if (!connected && socket) socket.close(4000, 'MQTT CONNACK timeout');
+    }, 15000);
+    pingTimer = setInterval(function () {
+      if (awaitingPing) { socket.close(4001, 'MQTT keepalive timeout'); return; }
+      awaitingPing = send(new Uint8Array([0xC0, 0x00]));
+    }, Math.max(1, keepalive || 30) * 1000);
+    retryTimer = setInterval(function () {
+      var now = Date.now();
+      Object.keys(pendingPublishes).forEach(function (key) {
+        var pending = pendingPublishes[key];
+        if (now - pending.sentAt < 5000) return;
+        if (pending.attempts >= 3) { socket.close(4002, 'MQTT PUBACK timeout'); return; }
+        var retry = pending.bytes.slice();
+        retry[0] |= 0x08;
+        pending.bytes = retry;
+        pending.sentAt = now;
+        pending.attempts += 1;
+        send(retry);
+      });
+    }, 1000);
   },
   KleverMqttSubscribe: function (topicPtr, qos) { if (window.KleverMqttBridge) window.KleverMqttBridge.subscribe(UTF8ToString(topicPtr), qos); },
   KleverMqttPublish: function (topicPtr, payloadPtr, qos, retain) { if (window.KleverMqttBridge) window.KleverMqttBridge.publish(UTF8ToString(topicPtr), UTF8ToString(payloadPtr), qos, retain); },

@@ -42,13 +42,18 @@ namespace Klass.Net
                 // empty JSON body so server frameworks don't reject it
                 req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{}"));
                 req.downloadHandler = new DownloadHandlerBuffer();
+                req.timeout = 20;
                 req.SetRequestHeader("Content-Type", "application/json");
+                req.SetRequestHeader("Accept", "application/json");
+                req.SetRequestHeader("Cache-Control", "no-store");
                 req.SetRequestHeader("device-id", SystemInfo.deviceUniqueIdentifier);
                 yield return req.SendWebRequest();
 
                 if (req.result != UnityWebRequest.Result.Success)
                 {
-                    onFailure?.Invoke($"HTTP {req.responseCode}: {req.error}");
+                    var response = req.downloadHandler == null ? "" : req.downloadHandler.text;
+                    if (response.Length > 256) response = response.Substring(0, 256);
+                    onFailure?.Invoke($"HTTP {req.responseCode}: {req.error} {response}".Trim());
                     yield break;
                 }
 
@@ -106,6 +111,22 @@ namespace Klass.Net
                     yield break;
                 }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (!Uri.TryCreate(c.BrokerWsUrl, UriKind.Absolute, out var brokerUri) ||
+                    (brokerUri.Scheme != "ws" && brokerUri.Scheme != "wss") ||
+                    string.IsNullOrEmpty(brokerUri.Host))
+                {
+                    onFailure?.Invoke("invalid brokerWsUrl from credential endpoint");
+                    yield break;
+                }
+
+                if (KlassEndpoints.BackendBase.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                    brokerUri.Scheme != "wss")
+                {
+                    onFailure?.Invoke("brokerWsUrl must use wss for an HTTPS WebGL build");
+                    yield break;
+                }
+#else
                 if (!Uri.TryCreate(c.BrokerTcpUrl, UriKind.Absolute, out var brokerUri) ||
                     (brokerUri.Scheme != "mqtt" && brokerUri.Scheme != "mqtts") ||
                     string.IsNullOrEmpty(brokerUri.Host))
@@ -119,6 +140,7 @@ namespace Klass.Net
                 c.BrokerPort = brokerUri.IsDefaultPort
                     ? (c.BrokerUseTls ? 8883 : 1883)
                     : brokerUri.Port;
+#endif
                 onSuccess?.Invoke(c);
             }
         }

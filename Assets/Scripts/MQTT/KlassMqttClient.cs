@@ -2,13 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 using SimpleJSON;
 #if !UNITY_WEBGL || UNITY_EDITOR
 using uPLibrary.Networking.M2Mqtt;
+using uPLibrary.Networking.M2Mqtt.Messages;
 #endif
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace Klass.Net
 {
@@ -85,6 +86,14 @@ namespace Klass.Net
         {
             _wantConnected = false;
             DisconnectInternal("app quit");
+        }
+
+        void OnDestroy()
+        {
+            if (Instance != this) return;
+            _wantConnected = false;
+            DisconnectInternal("destroyed");
+            Instance = null;
         }
 
         // ── Public API ─────────────────────────────────────────────────────
@@ -210,14 +219,14 @@ namespace Klass.Net
                     yield return ConnectOnce();
                     if (!IsConnected)
                     {
-                        var wait = _backoff;
+                        var wait = _backoff * UnityEngine.Random.Range(0.8f, 1.2f);
                         _backoff = Mathf.Min(reconnectMaxSeconds, _backoff * 2f);
-                        yield return new WaitForSeconds(wait);
+                        yield return new WaitForSecondsRealtime(wait);
                         continue;
                     }
                     _backoff = reconnectInitialSeconds;
                 }
-                yield return new WaitForSeconds(1f);
+                yield return new WaitForSecondsRealtime(1f);
             }
         }
 
@@ -248,7 +257,7 @@ namespace Klass.Net
                 var sslProtocol = _creds.BrokerUseTls ? MqttSslProtocols.TLSv1_2 : MqttSslProtocols.None;
                 _client = new MqttClient(_creds.BrokerHost, _creds.BrokerPort, _creds.BrokerUseTls,
                     null, null, sslProtocol);
-                SubscribeMqttPublish(_client);
+                _client.MqttMsgPublishReceived += HandleIncomingMessage;
                 _client.ConnectionClosed += HandleConnectionClosed;
 
                 // Last Will: broker auto-publishes when this client drops/keepalive-times-out
@@ -263,7 +272,7 @@ namespace Klass.Net
                     /*willFlag*/ true,
                     willTopic,
                     Encoding.UTF8.GetString(willPayload),
-                    /*cleanSession*/ false,
+                    /*cleanSession*/ true,
                     /*keepAlivePeriod*/ (ushort)_creds.KeepaliveSeconds);
 
                 if (code != 0)
@@ -328,7 +337,7 @@ namespace Klass.Net
             {
                 var ttl = _creds.ExpiresAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 var sleep = Mathf.Max(60f, (float)(ttl - 60));
-                yield return new WaitForSeconds(sleep);
+                yield return new WaitForSecondsRealtime(sleep);
                 // Force reconnect with fresh creds (keeps things simple & robust)
                 Debug.Log("[KlassMqtt] credential refresh triggered");
                 _creds = null;
@@ -370,18 +379,22 @@ namespace Klass.Net
         }
 
         // Called by KleverMqtt.jslib on Unity's main thread.
+        [Preserve]
         public void OnKleverMqttWebGlConnected(string _) => _webGlConnectResult = 1;
+        [Preserve]
         public void OnKleverMqttWebGlConnectFailed(string reason)
         {
             Debug.LogWarning($"[KlassMqtt] WebGL broker refused connection: {reason}");
             _webGlConnectResult = -1;
         }
+        [Preserve]
         public void OnKleverMqttWebGlDisconnected(string _)
         {
             if (!IsConnected) return;
             IsConnected = false;
             OnDisconnected?.Invoke();
         }
+        [Preserve]
         public void OnKleverMqttWebGlMessage(string envelope)
         {
             try
@@ -397,52 +410,17 @@ namespace Klass.Net
 #endif
 
 #if !UNITY_WEBGL || UNITY_EDITOR
-        private void SubscribeMqttPublish(MqttClient client)
-        {
-            try
-            {
-                var ev = client.GetType().GetEvent("MqttMsgPublishReceived");
-                if (ev == null) { Debug.LogError("[KlassMqtt] MqttMsgPublishReceived event not found on MqttClient"); return; }
-                var mi = GetType().GetMethod("HandleIncomingMessage", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (mi == null) { Debug.LogError("[KlassMqtt] HandleIncomingMessage method not found"); return; }
-                var del = Delegate.CreateDelegate(ev.EventHandlerType, this, mi);
-                ev.AddEventHandler(client, del);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[KlassMqtt] SubscribeMqttPublish threw: {ex.Message}");
-            }
-        }
-
         private void UnsubscribeMqttEvents(MqttClient client)
         {
             if (client == null) return;
             try
             {
                 client.ConnectionClosed -= HandleConnectionClosed;
-                UnsubscribeMqttPublish(client);
+                client.MqttMsgPublishReceived -= HandleIncomingMessage;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"[KlassMqtt] Failed to unsubscribe connection event: {ex.Message}");
-            }
-        }
-
-        private void UnsubscribeMqttPublish(MqttClient client)
-        {
-            if (client == null) return;
-            try
-            {
-                var ev = client.GetType().GetEvent("MqttMsgPublishReceived");
-                if (ev == null) return;
-                var mi = GetType().GetMethod("HandleIncomingMessage", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (mi == null) return;
-                var del = Delegate.CreateDelegate(ev.EventHandlerType, this, mi);
-                ev.RemoveEventHandler(client, del);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[KlassMqtt] Failed to unsubscribe publish event: {ex.Message}");
             }
         }
 
@@ -466,19 +444,14 @@ namespace Klass.Net
         }
 
         [UnityEngine.Scripting.Preserve]
-        private void HandleIncomingMessage(object sender, EventArgs e)
+        private void HandleIncomingMessage(object sender, MqttMsgPublishEventArgs e)
         {
             // M2Mqtt fires this on a worker thread — wrap in try-catch to prevent application crash on background thread exception.
             try
             {
                 if (e == null) return;
-                var eType = e.GetType();
-                var topicProp = eType.GetProperty("Topic");
-                var msgProp = eType.GetProperty("Message");
-                if (topicProp == null || msgProp == null) return;
-
-                string topic = topicProp.GetValue(e) as string ?? "";
-                byte[] msgBytes = msgProp.GetValue(e) as byte[];
+                string topic = e.Topic ?? "";
+                byte[] msgBytes = e.Message;
                 string payload = msgBytes != null ? Encoding.UTF8.GetString(msgBytes) : "";
 
                 EnqueueMain(() => DispatchIncomingMessage(topic, payload));
