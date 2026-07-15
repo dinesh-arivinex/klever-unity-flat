@@ -101,7 +101,7 @@ public class API : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
 
         //uncomment device id
-         req.SetRequestHeader("device-id", SystemInfo.deviceUniqueIdentifier);
+         req.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
        // req.SetRequestHeader("device-id","aj4y");
        
         req.certificateHandler = new BypassCertificateHandler();

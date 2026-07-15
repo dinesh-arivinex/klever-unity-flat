@@ -72,7 +72,7 @@ public class SocketIOManager : MonoBehaviour
         StartCoroutine(CheckConnectionTimeout());
       //  StartCoroutine(CallAfter());
        
-        DebugUtil.Log("deviceId is" + SystemInfo.deviceUniqueIdentifier);
+        DebugUtil.Log("deviceId is" + Klass.Net.KlassDeviceIdentity.Value);
 
     }
 
@@ -99,7 +99,7 @@ public class SocketIOManager : MonoBehaviour
 
         DeviceStatus status = new DeviceStatus
         {
-            deviceId = SystemInfo.deviceUniqueIdentifier,
+            deviceId = Klass.Net.KlassDeviceIdentity.Value,
             //deviceId ="abxcdfg",
             isOnline = value
         };
@@ -112,7 +112,7 @@ public class SocketIOManager : MonoBehaviour
     {
         SynchDevice synchDevice = new SynchDevice()
         {
-            deviceId = SystemInfo.deviceUniqueIdentifier,
+            deviceId = Klass.Net.KlassDeviceIdentity.Value,
             isCompleted = true
         };
 
@@ -121,7 +121,7 @@ public class SocketIOManager : MonoBehaviour
     }
     public void SendDeviceID()
     {
-        socket.Emit("activeDevice", SystemInfo.deviceUniqueIdentifier);
+        socket.Emit("activeDevice", Klass.Net.KlassDeviceIdentity.Value);
     }
     void OnDestroy()
     {

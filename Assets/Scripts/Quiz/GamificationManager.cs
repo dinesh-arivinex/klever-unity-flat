@@ -260,7 +260,7 @@ public class GamificationManager : MonoBehaviour
         GameManager.Instance.AssessmentParent.SetActive(false);
         StudentScore student = new StudentScore()
         {
-            studentID = SystemInfo.deviceUniqueIdentifier,//deviceid
+            studentID = Klass.Net.KlassDeviceIdentity.Value,//deviceid
             experienceConductedID = experienceId,
             schoolId = schoolId,
             sectionID = sectionID,
@@ -300,7 +300,7 @@ public class GamificationManager : MonoBehaviour
 
         req.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        req.SetRequestHeader("device-id", SystemInfo.deviceUniqueIdentifier);
+        req.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
         req.certificateHandler = new BypassCertificateHandler();
         //Send the request then wait here until it returns
         yield return req.SendWebRequest();
@@ -394,7 +394,7 @@ public class GamificationManager : MonoBehaviour
         request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
-        request.SetRequestHeader("device-id", SystemInfo.deviceUniqueIdentifier);
+        request.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
         //  request.SetRequestHeader("Authorization", $"Bearer {bearerToken}");
 
         // Use the custom CertificateHandler to bypass certificate validation (for development purposes only)

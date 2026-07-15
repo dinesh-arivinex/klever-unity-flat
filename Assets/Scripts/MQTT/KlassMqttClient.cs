@@ -31,6 +31,15 @@ namespace Klass.Net
     {
         public static KlassMqttClient Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Bootstrap()
+        {
+            if (Instance != null) return;
+            var go = new GameObject("[KlassMqttClient]");
+            var mqtt = go.AddComponent<KlassMqttClient>();
+            mqtt.Begin();
+        }
+
         [Header("Tuning")]
         public float reconnectInitialSeconds = 2f;
         public float reconnectMaxSeconds = 30f;

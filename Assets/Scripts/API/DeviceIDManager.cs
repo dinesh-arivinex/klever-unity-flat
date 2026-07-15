@@ -36,7 +36,7 @@ public class DeviceIDManager : MonoBehaviour
     {
         //Uncomment
         // device Sync handler.cs(203,126)  api.cs(94)
-      deviceID = SystemInfo.deviceUniqueIdentifier;
+      deviceID = Klass.Net.KlassDeviceIdentity.Value;
      // deviceID = "aj4y";
         registration = new DevideIDRegistraction();
 

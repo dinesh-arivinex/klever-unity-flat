@@ -4,6 +4,47 @@ using UnityEngine;
 namespace Klass.Net
 {
     /// <summary>
+    /// One stable, broker-safe identity shared by registration, REST and MQTT.
+    /// WebGL may report SystemInfo.unsupportedIdentifier; persist a generated
+    /// fallback so reloads continue to authenticate as the same device.
+    /// </summary>
+    public static class KlassDeviceIdentity
+    {
+        private const string PlayerPrefsKey = "klass.device_id";
+        private static string _value;
+
+        public static string Value
+        {
+            get
+            {
+                if (IsValid(_value)) return _value;
+
+                var persisted = PlayerPrefs.GetString(PlayerPrefsKey, string.Empty).Trim();
+                if (IsValid(persisted)) return _value = persisted;
+
+                var platformId = (SystemInfo.deviceUniqueIdentifier ?? string.Empty).Trim();
+                _value = IsValid(platformId) ? platformId : $"device_{Guid.NewGuid():N}";
+                PlayerPrefs.SetString(PlayerPrefsKey, _value);
+                PlayerPrefs.Save();
+                return _value;
+            }
+        }
+
+        private static bool IsValid(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length > 64) return false;
+            for (var i = 0; i < value.Length; i++)
+            {
+                var c = value[i];
+                var asciiLetter = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+                var asciiDigit = c >= '0' && c <= '9';
+                if (!(asciiLetter || asciiDigit || c == '_' || c == '-')) return false;
+            }
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Centralised endpoint configuration for the headset.
     ///
     /// Reads from PlayerPrefs first (key: "klass.backend_base_url" / "klass.mqtt_broker_host" /
