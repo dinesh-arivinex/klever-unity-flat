@@ -5,6 +5,7 @@ using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.UI;
 using Vuplex.WebView;
 using static ChangeClassRoom;
 using static UnityEngine.Rendering.DebugUI;
@@ -30,6 +31,7 @@ public class WebManager : MonoBehaviour
     public GameObject simulation;
     public GameObject temp;
     private bool firstTime;
+    private bool urlChangedHandlerAttached;
     public bool isobjectXR;
     // Start is called before the first frame update
     void Start()
@@ -90,12 +92,7 @@ public class WebManager : MonoBehaviour
         url = newUrl;
         simulationTimer = ConvertTimeToSeconds(time);
 
-        if (_webViewPrefab != null)
-        {
-            _webViewPrefab.InitialUrl = url;
-        }
-
-        StartLoading();
+        StartLoading(url);
 
         StartSimulation();
     }
@@ -108,14 +105,7 @@ public class WebManager : MonoBehaviour
             if (firstTime)
             {
                 ChangeSkyBox.SetSkybox(ChangeSkyBox.skyBoxMaterialNew[ChangeClassRoom.Instance.classRoom]);
-                if (GamificationControllerHandSwitcher.Instance != null)
-                {
-                    if (GamificationControllerHandSwitcher.Instance.leftHandRaycast != null) GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(true);
-                    if (GamificationControllerHandSwitcher.Instance.rightHandRaycast != null) GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(true);
-                    if (GamificationControllerHandSwitcher.Instance.leftControllerRaycast != null) GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(true);
-                    if (GamificationControllerHandSwitcher.Instance.rightControllerRaycast != null) GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(true);
-                }
-                canvasWebViewLoader.SetupWebView(url);
+                EnableWebViewRaycasts();
                 simulation.transform.position = temp.transform.position;
                 simulation.transform.rotation = temp.transform.rotation;
                 startingevent.Invoke();
@@ -126,19 +116,17 @@ public class WebManager : MonoBehaviour
                 {
                     googleTextToSpeech.StartTalking(simulationScript);
                 }
-                if (isobjectXR)
-                {
-                    PlayerPrefs.SetInt("InSimulation", 1);
-                    PlayerPrefs.Save();
-                    Application.OpenURL(url);
-                }
             }
             else
             {
                 ChangeSkyBox.SetSkybox(ChangeSkyBox.skyBoxMaterialNew[ChangeClassRoom.Instance.classRoom]);
                 webView.SetActive(true);
-                canvasWebViewLoader.SetupWebView(url);
+                if (isobjectXR)
+                {
+                    EnableWebViewRaycasts();
+                }
             }
+
             firstTime = true;
 
         }
@@ -147,6 +135,19 @@ public class WebManager : MonoBehaviour
             CheckTheStatus();
         }
 
+    }
+
+    private void EnableWebViewRaycasts()
+    {
+        if (GamificationControllerHandSwitcher.Instance == null)
+        {
+            return;
+        }
+
+        if (GamificationControllerHandSwitcher.Instance.leftHandRaycast != null) GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(true);
+        if (GamificationControllerHandSwitcher.Instance.rightHandRaycast != null) GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(true);
+        if (GamificationControllerHandSwitcher.Instance.leftControllerRaycast != null) GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(true);
+        if (GamificationControllerHandSwitcher.Instance.rightControllerRaycast != null) GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(true);
     }
 
     public void ToggleItem(bool value)
@@ -161,20 +162,78 @@ public class WebManager : MonoBehaviour
 
     }
 
-    private async void StartLoading()
+    private async void StartLoading(string urlToLoad)
     {
-        if (_webViewPrefab != null)
+        if (_webViewPrefab != null && !string.IsNullOrWhiteSpace(urlToLoad))
         {
+            ConfigureWebViewCanvas();
             await _webViewPrefab.WaitUntilInitialized();
-            _webViewPrefab.WebView.UrlChanged += (sender, eventArgs) => {
-                Debug.Log("[WebManager] URL changed: " + eventArgs.Url);
-                if (!string.IsNullOrEmpty(eventArgs.Url) && eventArgs.Url.Contains("klever://"))
-                {
-                    Debug.Log("[WebManager] Deep link 'klever://' detected. Closing simulation.");
-                    CheckTheStatus();
-                }
-            };
-            _webViewPrefab.WebView.LoadUrl(url);
+            if (url != urlToLoad)
+            {
+                return;
+            }
+
+            ConfigureWebViewCanvas();
+            if (!urlChangedHandlerAttached)
+            {
+                _webViewPrefab.WebView.UrlChanged += (sender, eventArgs) => {
+                    Debug.Log("[WebManager] URL changed: " + eventArgs.Url);
+                    if (!string.IsNullOrEmpty(eventArgs.Url) && eventArgs.Url.Contains("klever://"))
+                    {
+                        Debug.Log("[WebManager] Deep link 'klever://' detected. Closing simulation.");
+                        CheckTheStatus();
+                    }
+                };
+                urlChangedHandlerAttached = true;
+            }
+            _webViewPrefab.WebView.LoadUrl(urlToLoad);
+        }
+    }
+
+    private void ConfigureWebViewCanvas()
+    {
+        if (_webViewPrefab == null)
+        {
+            return;
+        }
+
+        var canvas = _webViewPrefab.GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            var canvasHost = _webViewPrefab.transform.parent;
+            if (canvasHost == null || canvasHost.GetComponent<RectTransform>() == null)
+            {
+                canvasHost = _webViewPrefab.transform;
+            }
+
+            canvas = canvasHost.gameObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.additionalShaderChannels = AdditionalCanvasShaderChannels.TexCoord1 |
+                                              AdditionalCanvasShaderChannels.Normal |
+                                              AdditionalCanvasShaderChannels.Tangent;
+        }
+
+        if (canvas.renderMode == RenderMode.WorldSpace && canvas.worldCamera == null)
+        {
+            var eventCamera = Camera.main;
+            if (eventCamera == null)
+            {
+                eventCamera = FindAnyObjectByType<Camera>();
+            }
+
+            if (eventCamera != null)
+            {
+                canvas.worldCamera = eventCamera;
+            }
+            else
+            {
+                Debug.LogWarning("[WebManager] No active camera was found for the WebView canvas.");
+            }
+        }
+
+        if (canvas.GetComponent<GraphicRaycaster>() == null)
+        {
+            canvas.gameObject.AddComponent<GraphicRaycaster>();
         }
     }
 

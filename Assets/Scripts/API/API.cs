@@ -394,12 +394,15 @@ public class API : MonoBehaviour
                         PlayerPrefs.SetString("Speak", script);
                         PlayerPrefs.SetString("ImageScript", content["imageScript"]); // Check if this is correct
                                                                                       //  StartCoroutine(WaitUntil(allAnnotations));
-                        int value = PlayerPrefs.GetInt("InSimulation", 0);
-                        bool isResuming = DeepLinkManager.isResumingFromDeepLink || (PlayerPrefs.GetInt("InSimulation", 0) == 1);
+                        if (PlayerPrefs.HasKey("InSimulation"))
+                        {
+                            PlayerPrefs.DeleteKey("InSimulation");
+                            PlayerPrefs.Save();
+                        }
+
+                        bool isResuming = DeepLinkManager.isResumingFromDeepLink;
                         if (isResuming)
                         {
-                            PlayerPrefs.SetInt("InSimulation", 0);
-                            PlayerPrefs.Save();
                             DeepLinkManager.ResumeExperience();
                         }
                         else
