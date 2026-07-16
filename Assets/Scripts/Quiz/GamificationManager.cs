@@ -162,20 +162,20 @@ public class GamificationManager : MonoBehaviour
         {
             // string nextGameName = selectedGames[currentGameIndex];
             currentGameName = currentGame;
-            if (!GamificationControllerHandSwitcher.Instance.isHandMode)
-            {
-                GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(false);
-                GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.handPoseBall.SetActive(true);
-                //GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(true);
-            }
-            else
-            {
-                GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(false);
-                GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.handPoseBallHandMode.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(false);
-            }
+            //if (!GamificationControllerHandSwitcher.Instance.isHandMode)
+            //{
+            //    GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(false);
+            //    GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(true);
+            //    GamificationControllerHandSwitcher.Instance.handPoseBall.SetActive(true);
+            //    //GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(true);
+            //}
+            ////else
+            //{
+            //    GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(false);
+            //    GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(true);
+            //    GamificationControllerHandSwitcher.Instance.handPoseBallHandMode.SetActive(true);
+            //    GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(false);
+            //}
             switch (currentGameName)
             {
                 case "Archery":
