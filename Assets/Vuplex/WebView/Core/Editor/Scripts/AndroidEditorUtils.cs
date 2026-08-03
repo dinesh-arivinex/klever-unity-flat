@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -31,6 +31,7 @@ namespace Vuplex.WebView.Editor {
 
             _validateGraphicsApi(native2DSupported);
             _forceInternetPermission();
+            _warnIfMuteOtherAudioSourcesIsEnabled();
             _updateNativePluginSettings(nativeLibraryName);
             _updateProguardFileIfNeeded(productName, proguardRulesExpectedRelativePath);
             _assertThatOculusLowOverheadModeIsDisabled();
@@ -218,6 +219,13 @@ namespace Vuplex.WebView.Editor {
                     throw new BuildFailedException(warningPrefix + " 3D WebView for Android requires Unity 2020.2 or newer in order to support Vulkan. So, please either upgrade to a newer version of Unity or change the selected Graphics API to OpenGLES in Player Settings.");
                 #endif
             #endif
+        }
+
+        static void _warnIfMuteOtherAudioSourcesIsEnabled() {
+
+            if (PlayerSettings.muteOtherAudioSources) {
+                WebViewLogger.LogWarning("\"Mute Other Audio Sources\" is enabled in Player Settings, which can cause Unity audio sources to stop playing when a webview plays audio. To prevent this issue from occurring, go to Android Player Settings -> Other Settings -> Configuration and disable \"Mute Other Audio Sources\".");
+            }
         }
     }
 }

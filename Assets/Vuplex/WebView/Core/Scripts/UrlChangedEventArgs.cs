@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -28,6 +28,8 @@ namespace Vuplex.WebView {
         /// The new URL.
         /// </summary>
         public string Url;
+
+        public override string ToString() => "Url = " + Url;
 
         // Added in v1.0, removed in v3.13.
         [Obsolete("UrlChangedEventArgs.Title has been removed. Please use IWebView.Title or IWebView.TitleChanged instead: https://developer.vuplex.com/webview/IWebView#Title", true)]

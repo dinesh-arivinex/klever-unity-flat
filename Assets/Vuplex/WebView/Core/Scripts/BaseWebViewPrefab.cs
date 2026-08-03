@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -27,7 +27,7 @@ namespace Vuplex.WebView {
         /// calls IWebView.Click() for you.
         /// </summary>
         /// <remarks>
-        /// This event is not supported when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).
+        /// This event is not supported when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.
         /// </remarks>
         /// <example>
         /// <code>
@@ -60,7 +60,7 @@ namespace Vuplex.WebView {
         /// calls IWebView.Scroll() for you.
         /// </summary>
         /// <remarks>
-        /// This event is not supported when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).
+        /// This event is not supported when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.
         /// </remarks>
         /// <example>
         /// webViewPrefab.Scrolled += (sender, eventArgs) => {
@@ -70,10 +70,47 @@ namespace Vuplex.WebView {
         public virtual event EventHandler<ScrolledEventArgs> Scrolled;
 
         /// <summary>
+        /// For Windows and macOS, gets the webview's AudioSource if it was enabled with AudioSourceEnabled, or null otherwise.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// webViewPrefab.AudioSourceEnabled = true;
+        /// await webViewPrefab.WaitUntilInitialized();
+        /// // Enable 3D spatial audio for the webview.
+        /// // The default is 2D audio (spatialBlend = 0f).
+        /// webViewPrefab.AudioSource.spatialBlend = 1f;
+        /// </code>
+        /// </example>
+        public AudioSource AudioSource { get => _webAudioSource == null ? null : _webAudioSource.AudioSource; }
+
+        /// <summary>
+        /// For Windows and macOS, sets whether the webview's audio is played through Unity as an AudioSource. The default is `false`, in which
+        /// case audio is output directly to the system instead of being routed through Unity because that is more efficient.
+        /// When set to `true`, the webview's audio is routed through Unity and played through an AudioSource attached to
+        /// the prefab, which is accessible to scripts via the WebViewPrefab.AudioSource property.
+        /// AudioSourceEnabled is only supported by 3D WebView for Windows and macOS. On other platforms, webview audio can only
+        /// be output directly to the system and cannot be routed through Unity.
+        /// </summary>
+        /// <remarks>
+        /// If the user is running Windows on macOS via a <see href="https://www.parallels.com">Parallels virtual machine</see>,
+        /// Chromium is unable to capture audio stream data.  As a result, the AudioSource will not output audio
+        /// and the webview will effectively be muted. To avoid audio from being muted in this scenario, your app
+        /// can use a script to detect when it's running in Parallels and then disable AudioSource support, like this:
+        /// <code>
+        /// if (SystemInfo.deviceModel.Contains("Parallels Virtual Platform")) {
+        ///     yourWebViewPrefab.AudioSourceEnabled = false;
+        /// }
+        /// </code>
+        /// </remarks>
+        [Label("Output Audio as AudioSource (Windows & macOS only)")]
+        [Tooltip("(Windows and macOS only) Sets whether the webview's audio is played through Unity as an AudioSource. This is disabled by default, in which case audio is output directly to the system instead of being routed through Unity because that is more efficient. When enabled, the webview's audio is routed through Unity and played through an AudioSource attached to the prefab, which is accessible to scripts via the WebViewPrefab.AudioSource property.")]
+        public bool AudioSourceEnabled;
+
+        /// <summary>
         /// Determines whether clicking is enabled. The default is `true`.
         /// </summary>
         /// <remarks>
-        /// This property is ignored when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).
+        /// This property is ignored when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.
         /// </remarks>
         public bool ClickingEnabled = true;
 
@@ -93,7 +130,7 @@ namespace Vuplex.WebView {
         /// <remarks>
         /// Important notes:
         /// <list type="bullet">
-        ///   <item>This property is ignored when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).</item>
+        ///   <item>This property is ignored when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.</item>
         ///   <item>
         ///     For information on the limitations of drag interactions on iOS and UWP, please see
         ///     [this article](https://support.vuplex.com/articles/hover-and-drag-limitations).
@@ -122,7 +159,7 @@ namespace Vuplex.WebView {
         ///     the distance that the pointer must drag before it triggers
         ///     a drag within the page.
         ///   </item>
-        ///   <item>This property is ignored when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).</item>
+        ///   <item>This property is ignored when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.</item>
         /// </list>
         /// </remarks>
         [Label("Drag Threshold (px)")]
@@ -135,7 +172,7 @@ namespace Vuplex.WebView {
         /// <remarks>
         /// Important notes:
         /// <list type="bullet">
-        ///   <item>This property is ignored when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).</item>
+        ///   <item>This property is ignored when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.</item>
         ///   <item>
         ///     For information on the limitations of hovering on iOS and UWP, please see
         ///     [this article](https://support.vuplex.com/articles/hover-and-drag-limitations).
@@ -159,9 +196,12 @@ namespace Vuplex.WebView {
         /// <summary>
         /// Determines whether the webview automatically receives keyboard input from the native keyboard and the Keyboard prefab. The default is `true`.
         /// </summary>
+        /// <remarks>
+        /// This property is ignored when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.
+        /// </remarks>
         /// <seealso cref="NativeOnScreenKeyboardEnabled">NativeOnScreenKeyboardEnabled</seealso>
         /// <seealso href="https://support.vuplex.com/articles/keyboard">How does keyboard input work?</seealso>
-        [Tooltip("Determines whether the webview automatically receives keyboard input from the native keyboard and the Keyboard prefab.")]
+        [Tooltip("Determines whether the webview automatically receives keyboard input from the native keyboard and the Keyboard prefab. Note that this property is ignored when running in Native 2D Mode.")]
         public bool KeyboardEnabled = true;
 
         /// <summary>
@@ -175,7 +215,7 @@ namespace Vuplex.WebView {
         /// Gets or sets prefab's material.
         /// </summary>
         /// <remarks>
-        /// This property is unused when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).
+        /// This property is unused when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.
         /// </remarks>
         public Material Material {
             get => _view.Material;
@@ -185,19 +225,29 @@ namespace Vuplex.WebView {
         /// <summary>
         /// Sets the webview's pixel density, which is its number of physical pixels per logical pixel.
         /// The default value is `1`, but increasing it to `2` can make web content appear sharper
-        /// or less blurry on high DPI displays. PixelDensity is currently only supported by
-        /// 3D WebView for Windows and macOS.
+        /// or less blurry on high DPI displays. PixelDensity is currently only supported for
+        /// Windows, macOS, iOS, and visionOS.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// When running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>, the PixelDensity field
+        /// isn't used because the device's native pixel density is used instead. So, the PixelDensity field's value is inaccurate and changes to it are ignored.
+        /// </para>
+        /// <para>
+        /// For the macOS WebKit plugin, increasing the pixel density is disabled by default because it negatively impacts
+        /// performance, particularly on Macs with Intel processors. However, you can override this with MacWebKitWebView.PixelDensityEnabled.
+        /// </para>
+        /// </remarks>
         /// <example>
         /// <code>
         /// // Increase the pixel density to 2 for high DPI screens.
-        /// webViewPrefab.PixelDensity = 2;
+        /// webViewPrefab.PixelDensity = 2f;
         /// </code>
         /// </example>
         /// <seealso cref="IWithPixelDensity"/>
-        [Label("Pixel Density (Windows & macOS only)")]
-        [Tooltip("(Windows and macOS only) Sets the webview's pixel density.")]
-        public float PixelDensity = 1;
+        [Label("Pixel Density (Windows, macOS, iOS, & visionOS only)")]
+        [Tooltip("(Windows, macOS, iOS, and visionOS only) Sets the webview's pixel density. Note that this property is ignored when running in Native 2D Mode.")]
+        public float PixelDensity = 1f;
 
         /// <summary>
         /// Determines whether the prefab enables remote debugging by calling Web.EnableRemoteDebugging().
@@ -212,7 +262,7 @@ namespace Vuplex.WebView {
         /// Determines whether scrolling is enabled. The default is `true`.
         /// </summary>
         /// <remarks>
-        /// This property is ignored when running in [Native 2D Mode](https://support.vuplex.com/articles/native-2d-mode).
+        /// This property is ignored when running in <see href="https://support.vuplex.com/articles/native-2d-mode">Native 2D Mode</see>.
         /// </remarks>
         public bool ScrollingEnabled = true;
 
@@ -441,6 +491,7 @@ namespace Vuplex.WebView {
         }
         Material _viewMaterial;
         bool _visible = true;
+        WebAudioSource _webAudioSource;
         protected IWebView _webViewForInitialization;
         [SerializeField]
         [HideInInspector]
@@ -473,10 +524,6 @@ namespace Vuplex.WebView {
         void _attachWebViewEventHandlers(IWebView webView) {
 
             _enableConsoleMessagesIfNeeded(webView);
-            var webViewWithPopoverTexture = webView as IWithPopoverTexture;
-            if (webViewWithPopoverTexture != null) {
-                webViewWithPopoverTexture.PopoverRectChanged += WebView_PopoverRectChanged;
-            }
             // Needed for Vulkan support on Android.
             // See the comments in IWithChangingTexture.cs for details.
             var webViewWithChangingTexture = webView as IWithChangingTexture;
@@ -492,7 +539,7 @@ namespace Vuplex.WebView {
 
         void _disableHoveringIfNeeded(bool preferNative2DMode) {
 
-            #if (UNITY_IOS || UNITY_WSA) && !VUPLEX_NO_DISABLING_HOVER_FOR_PERFORMANCE
+            #if (UNITY_IOS || UNITY_VISIONOS || UNITY_WSA) && !VUPLEX_NO_DISABLING_HOVER_FOR_PERFORMANCE
                 if (!HoveringEnabled) {
                     return;
                 }
@@ -503,7 +550,7 @@ namespace Vuplex.WebView {
                 HoveringEnabled = false;
                 if (!_loggedHoverWarning) {
                     _loggedHoverWarning = true;
-                    WebViewLogger.LogWarning("WebViewPrefab.HoveringEnabled is automatically set to false by default on iOS and UWP in order to optimize performance. However, you can override this by adding the scripting symbol VUPLEX_NO_DISABLING_HOVER_FOR_PERFORMANCE in player settings. For more info, see <em>https://support.vuplex.com/articles/hover-and-drag-limitations</em>.");
+                    WebViewLogger.LogWarning("WebViewPrefab.HoveringEnabled is automatically set to false by default on iOS, visionOS, and UWP in order to optimize performance. However, you can override this by adding the scripting symbol VUPLEX_NO_DISABLING_HOVER_FOR_PERFORMANCE in player settings. For more info, see <em>https://support.vuplex.com/articles/hover-and-drag-limitations</em>.");
                 }
             #endif
         }
@@ -524,9 +571,29 @@ namespace Vuplex.WebView {
             }
         }
 
+        void _enableOrDisableAudioSourceIfNeeded(IWithAudioStream webViewWithAudioStream) {
+
+            if (webViewWithAudioStream == null) {
+                // This webview implementation doesn't support IWithAudioStream.
+                return;
+            }
+            var audioSourceEnabledValueChanged = AudioSourceEnabled != webViewWithAudioStream.AudioStreamEnabled;
+            if (!audioSourceEnabledValueChanged) {
+                return;
+            }
+            webViewWithAudioStream.SetAudioStreamEnabled(AudioSourceEnabled);
+            if (AudioSourceEnabled && _webAudioSource == null) {
+                _webAudioSource = gameObject.AddComponent<WebAudioSource>();
+                _webAudioSource.InitWithWebView(webViewWithAudioStream);
+            }
+        }
+
         void _enableOrDisableKeyboardIfNeeded() {
 
-            if (WebView != null && _keyboardHasBeenEnabled != KeyboardEnabled) {
+            // Don't call SetKeyboardEnabled() for Native 2D Mode because keyboard input is entered directly
+            // into the native webview and calling SetKeyboardEnabled() sets a CanvasWebViewPrefab.Clicked handler,
+            // which logs a warning in Native 2D Mode.
+            if (WebView != null && !_native2DModeEnabled(WebView) && _keyboardHasBeenEnabled != KeyboardEnabled) {
                 Internal.KeyboardManager.Instance.SetKeyboardEnabled(this, KeyboardEnabled);
                 _keyboardHasBeenEnabled = KeyboardEnabled;
             }
@@ -619,11 +686,6 @@ namespace Vuplex.WebView {
             // Initialize the main view.
             _viewMaterial = webView.CreateMaterial();
             _view.Material = _viewMaterial;
-            // Initialize the popover texture (Windows & macOS only).
-            var webViewWithPopoverTexture = webView as IWithPopoverTexture;
-            if (webViewWithPopoverTexture != null) {
-                _view.SetPopoverTexture(webViewWithPopoverTexture.PopoverTexture);
-            }
             // Initialize the fallback video texture (iOS only).
             var webViewWithFallbackVideo = webView as IWithFallbackVideo;
             if (webViewWithFallbackVideo != null) {
@@ -637,7 +699,6 @@ namespace Vuplex.WebView {
                 return _webViewForInitialization;
             }
             var webView = Web.CreateWebView(_options.preferredPlugins);
-
             // Enable Native 2D Mode if needed.
             var enableNative2DMode = preferNative2DMode && webView is IWithNative2DMode;
             if (enableNative2DMode) {
@@ -655,7 +716,7 @@ namespace Vuplex.WebView {
 
             _updatePixelDensityIfNeeded(webView);
 
-            // (iOS only) Enable fallback video if needed.
+            // (iOS and visionOS only) Enable fallback video if needed.
             var webViewWithFallbackVideo = webView as IWithFallbackVideo;
             if (webViewWithFallbackVideo != null && !_options.disableVideo) {
                 webViewWithFallbackVideo.SetFallbackVideoEnabled(true);
@@ -667,6 +728,9 @@ namespace Vuplex.WebView {
                 _handleTrialExpired();
                 throw ex;
             }
+
+            // (Windows and macOS only) Enable AudioSource if needed.
+            _enableOrDisableAudioSourceIfNeeded(webView as IWithAudioStream);
 
             // (Windows and macOS only) Enable cursor icons if needed.
             var webViewWithCursorType = webView as IWithCursorType;
@@ -926,10 +990,13 @@ namespace Vuplex.WebView {
 
         protected virtual void Update() {
 
-            _updateResolutionIfNeeded();
-            _updatePixelDensityIfNeeded(WebView);
+            if (WebView != null && !_native2DModeEnabled(WebView)) {
+                _updateResolutionIfNeeded();
+                _updatePixelDensityIfNeeded(WebView);
+            }
             _enableOrDisableKeyboardIfNeeded();
             _enableConsoleMessagesIfNeeded(WebView);
+            _enableOrDisableAudioSourceIfNeeded(WebView as IWithAudioStream);
         }
 
         void _updatePixelDensityIfNeeded(IWebView webView) {
@@ -940,6 +1007,11 @@ namespace Vuplex.WebView {
             }
             try {
                 webViewWithPixelDensity.SetPixelDensity(PixelDensity);
+                // The macOS WebKit plugin implements IWithPixelDensity but ignores calls to SetPixelDensity()
+                // by default unless MacWebKitWebView.PixelDensityEnabled is set. So, if the webview ignored
+                // the call to SetPixelDensity(), we update the prefab's PixelDensity to reflect that and to
+                // prevent this method from trying to call SetPixelDensity() again on every frame.
+                PixelDensity = webViewWithPixelDensity.PixelDensity;
             } catch (ArgumentException ex) {
                 WebViewLogger.LogError(ex.ToString());
                 PixelDensity = 1;
@@ -984,11 +1056,6 @@ namespace Vuplex.WebView {
         void WebView_FallbackVideoRectChanged(object sender, EventArgs<Rect> eventArgs) {
 
             _view.SetFallbackVideoRect(eventArgs.Value);
-        }
-
-        void WebView_PopoverRectChanged(object sender, EventArgs<Rect> eventArgs) {
-
-            _view.SetPopoverRect(eventArgs.Value);
         }
 
         void WebView_TextureChanged(object sender, EventArgs<Texture2D> eventArgs) {

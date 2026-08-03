@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -103,7 +103,12 @@ namespace Vuplex.WebView.Internal {
 
             #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
                 _legacyInputManagerDisabled = true;
-                WebViewLogger.LogWarning("3D WebView's support for automatically detecting input from the native keyboard currently requires Unity's Legacy Input Manager, which is currently disabled for the project. So, automatic detection of input from the native keyboard will be disabled. For details, please see this page: https://support.vuplex.com/articles/keyboard");
+                var message = "3D WebView is currently unable to detect native hardware keyboard input when \"Active Input Handling\" is set to \"Input System\". To enable native keyboard input, please go to Player Settings -> Other Settings and change \"Active Input Handling\" to \"Both\" or \"Input Manager\". For more details, see this page: https://support.vuplex.com/articles/keyboard";
+                #if UNITY_STANDALONE
+                    WebViewLogger.LogError(message);
+                #else
+                    WebViewLogger.LogWarning(message);
+                #endif
             #else
                 _enableImeIfNeeded();
             #endif
@@ -117,10 +122,7 @@ namespace Vuplex.WebView.Internal {
             }
             var correctlySupportsIme = false;
             #if UNITY_2020_3
-                // Note: Unity doesn't support the *_OR_NEWER scripting symbols for minor release versions, like UNITY_2020_3_38_OR_NEWER)
-                var minorVersion = Application.unityVersion.Split(new char[] { '.' })[2];
-                var minorVersionNumber = int.Parse(minorVersion.Split(new char[] { 'f', 'a', 'b' })[0]);
-                correctlySupportsIme = minorVersionNumber >= 38;
+                correctlySupportsIme = VXUnityVersion.Instance.Patch >= 38;
             #elif UNITY_2021_2_OR_NEWER
                 correctlySupportsIme = true;
             #endif
@@ -140,6 +142,9 @@ namespace Vuplex.WebView.Internal {
 
         void _enableImeIfNeeded() {
 
+            if (!Web.AutoEnableIme) {
+                return;
+            }
             if (_imeShouldBeEnabled == null) {
                 _imeShouldBeEnabled = _determineIfImeShouldBeEnabled();
             }
@@ -419,7 +424,7 @@ namespace Vuplex.WebView.Internal {
                     var emitKeyUp = true;
                     // See the comments above _repeatKey().
                     if (_keyRepeatState?.Key == key) {
-                        CancelInvoke(REPEAT_KEY_METHOD_NAME);
+                        CancelInvoke(nameof(_repeatKey));
                         if (_keyRepeatState.HasRepeated) {
                             // KeyUpReceived has already been emitted for the key.
                             emitKeyUp = false;
@@ -449,10 +454,10 @@ namespace Vuplex.WebView.Internal {
                             oneOrMoreKeysProcessed = true;
                             // See the comments above _repeatKey().
                             if (_keyRepeatState != null) {
-                                CancelInvoke(REPEAT_KEY_METHOD_NAME);
+                                CancelInvoke(nameof(_repeatKey));
                             }
                             _keyRepeatState = new KeyRepeatState { Key = key };
-                            InvokeRepeating(REPEAT_KEY_METHOD_NAME, 0.5f, 0.1f);
+                            InvokeRepeating(nameof(_repeatKey), 0.5f, 0.1f);
                             break;
                         }
                     }
@@ -479,13 +484,12 @@ namespace Vuplex.WebView.Internal {
         // Whereas Input.inputString automatically handles repeating keys when they are pressed down,
         // Input.GetKeyDown() doesn't implement that repeating functionality. So, this class uses
         // InvokeRepeating() to implement repeating for keys in _keyValuesUndetectableThroughInputString.
-        const string REPEAT_KEY_METHOD_NAME = "_repeatKey";
         void _repeatKey() {
 
             var key = _keyRepeatState?.Key;
             if (key == null) {
                 // This shouldn't happen.
-                CancelInvoke(REPEAT_KEY_METHOD_NAME);
+                CancelInvoke(nameof(_repeatKey));
                 return;
             }
             var eventArgs = new KeyboardEventArgs(key, _modifiersDown);

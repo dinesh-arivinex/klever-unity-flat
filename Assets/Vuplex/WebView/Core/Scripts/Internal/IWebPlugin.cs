@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 using System;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Vuplex.WebView.Internal {

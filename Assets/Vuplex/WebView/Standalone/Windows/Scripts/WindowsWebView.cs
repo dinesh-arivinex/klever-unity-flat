@@ -28,7 +28,7 @@ namespace Vuplex.WebView {
     /// </summary>
     public class WindowsWebView : StandaloneWebView, IWebView {
 
-        public WebPluginType PluginType { get; } = WebPluginType.Windows;
+        public WebPluginType PluginType { get; } = WebPluginType.Standalone;
 
         public override void Dispose() {
 

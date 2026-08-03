@@ -33,7 +33,7 @@ namespace Vuplex.WebView {
             }
         }
 
-        public WebPluginType Type { get; } = WebPluginType.Windows;
+        public WebPluginType Type { get; } = WebPluginType.Standalone;
 
         public virtual IWebView CreateWebView() => WindowsWebView.Instantiate();
 

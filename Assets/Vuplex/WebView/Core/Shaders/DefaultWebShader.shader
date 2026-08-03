@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+﻿// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -13,15 +13,15 @@
 // limitations under the License.
 Shader "Vuplex/Default Web Shader" {
     Properties {
+        // Properties that get treated as multi-compile constants for performance.
         [Toggle(FLIP_X)] _FlipX ("Flip X", Float) = 0
         [Toggle(FLIP_Y)] _FlipY ("Flip Y", Float) = 0
+        [Toggle(FALLBACK_VIDEO_ENABLED)] _FallbackVideoEnabled ("Fallback Video Enabled", Float) = 0
 
         [Header(Properties set programmatically)]
         _FallbackVideoRect ("Video Cutout Rect", Vector) = (0, 0, 0, 0)
         _FallbackVideoTexture ("Fallback Video Texture", 2D) = "white" {}
         _MainTex ("Base (RGB)", 2D) = "white" {}
-        _PopoverRect ("Popover Rect", Vector) = (0, 0, 0, 0)
-        _PopoverTexture ("Popover Texture", 2D) = "white" {}
         _RenderBlackAsTransparent ("Render Black as Transparent", Float) = 0
 
         // Include these UI properties from UI-Default.shader
@@ -54,6 +54,7 @@ Shader "Vuplex/Default Web Shader" {
             ColorMask [_ColorMask]
 
             CGPROGRAM
+                #pragma multi_compile ___ FALLBACK_VIDEO_ENABLED
                 #pragma multi_compile ___ FLIP_X
                 #pragma multi_compile ___ FLIP_Y
                 #pragma vertex vert
@@ -110,8 +111,6 @@ Shader "Vuplex/Default Web Shader" {
 
                 float4 _FallbackVideoRect;
                 Texture2D _FallbackVideoTexture;
-                float4 _PopoverRect;
-                Texture2D _PopoverTexture;
                 float _RenderBlackAsTransparent;
 
                 bool _isBlack(fixed4 color) {
@@ -145,15 +144,21 @@ Shader "Vuplex/Default Web Shader" {
 
                 fixed4 frag(v2f i) : SV_Target {
 
-                    fixed4 color;
-                    if (_pointIsInRect(i.uv, _PopoverRect)) {
-                        // Sample the popover texture.
-                        // Convert from normalized coordinates within the view to normalized coordinates within the popover texture.
-                        float2 popoverTextureCoordinates = (i.uv - _PopoverRect.xy) / _PopoverRect.zw;
-                        color = _PopoverTexture.Sample(linear_clamp_sampler, popoverTextureCoordinates);
-                    } else {
-                        // Sample the main view texture.
-                        color = _MainTex.Sample(linear_clamp_sampler, i.uv);
+                    // Sample the main view texture.
+                    fixed4 color = _MainTex.Sample(linear_clamp_sampler, i.uv);
+                    // On all platforms, alpha is pre-multiplied in the texture data's colors. To render the colors accurately in Unity,
+                    // we need to get rid of the pre-multiplied alpha by dividing the colors by the alpha.
+                    // Otherwise, when displaying the following HTML test page, the semi-transparent
+                    // section would appear darker than it should:
+                    // <html>
+                    //   <head><meta name="transparent" content="true"></head>
+                    //   <body><style>html {background: linear-gradient(90deg, white 34%, transparent 100%);}</style></body>
+                    // </html>
+                    if (color.w != 0.0) {
+                        color = float4(color.xyz / color.w, color.w);
+                    }
+
+                    #ifdef FALLBACK_VIDEO_ENABLED
                         if (_pointIsInRect(i.uv, _FallbackVideoRect)) {
                             // In order to allow a web page to display content on top of a video, only
                             // render video on black pixels.
@@ -168,14 +173,18 @@ Shader "Vuplex/Default Web Shader" {
                                 }
                             }
                         }
-                        if (_RenderBlackAsTransparent && _isBlack(color)) {
-                            color = float4(0.0, 0.0, 0.0, 0.0);
-                        }
+                    #endif
+
+                    if (_RenderBlackAsTransparent && _isBlack(color)) {
+                        color = float4(0.0, 0.0, 0.0, 0.0);
                     }
 
-                    // Color correction to convert gamma to linear space.
-                    // This is performed last so it doesn't effect cutout rect functionality.
-                    #if !defined(UNITY_COLORSPACE_GAMMA)
+                    // Color correction to convert gamma to linear color space.
+                    // This is performed last so that it doesn't affect fallback video.
+                    // Skip for visionOS, where color correction is implemented by using a different
+                    // native texture color format because Unity only supports linear space for visionOS
+                    // and custom shaders like this aren't supported for RealityKit.
+                    #if !defined(UNITY_COLORSPACE_GAMMA) && !defined(UNITY_PLATFORM_VISIONOS)
                         color = float4(GammaToLinearSpace(color.xyz), color.w);
                     #endif
 

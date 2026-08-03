@@ -1,0 +1,16 @@
+//get in touch if you need another one or a custom image
+{
+    "icons": [
+        "Icons.AutoMirrored.Filled.KeyboardArrowLeft",
+        "Icons.Filled.Settings",
+        "Icons.AutoMirrored.Filled.ExitToApp",
+        "Icons.Filled.Home",
+        "Icons.Filled.Close",
+        "Icons.Filled.Refresh",
+        "Icons.Filled.Check",
+        "Icons.Filled.Person",
+        "Icons.Filled.Warning",
+        "Icons.Filled.Lock",
+        "Icons.AutoMirrored.Filled.ArrowBack"
+    ]
+}

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -30,6 +30,25 @@ namespace Vuplex.WebView {
     /// <seealso cref="CanvasWebViewPrefab"/>
     /// <seealso cref="IWebView"/>
     public static class Web {
+
+        /// <summary>
+        /// Sets whether 3D WebView automatically enables Input Method Editor (IME) on Windows and macOS
+        /// when it detects that the system language is Chinese, Japanese, or Korean. The default is `true`.
+        /// When this is enabled, 3D WebView automatically enables IME by setting Input.imeCompositionMode to IMECompositionMode.On.
+        /// Set this field to `false` if you instead want your application to manually handle enabling and disabling IME.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// void Awake() {
+        ///     // Disable IME.
+        ///     Input.imeCompositionMode = IMECompositionMode.Off;
+        ///     // Prevent 3D WebView from automatically re-enabling IME.
+        ///     Web.AutoEnableIme = false;
+        /// }
+        /// </code>
+        /// </example>
+        /// <seealso href="https://support.vuplex.com/articles/chinese-japanese-and-korean">How to enable IME for entering Chinese, Japanese, and Korean text input?</seealso>
+        public static bool AutoEnableIme = true;
 
         /// <summary>
         /// Returns the ICookieManager for managing HTTP cookies, or `null` if ICookieManager
@@ -102,17 +121,26 @@ namespace Vuplex.WebView {
         }
 
         /// <summary>
-        /// Like CreateWebView(), except an array of preferred plugin types can be
-        /// provided to override which 3D WebView plugin is used in the case where
-        /// multiple plugins are installed for the same build platform.
-        /// </summary>
-        /// <remarks>
-        /// Currently, Android is the only platform that supports multiple 3D WebView
-        /// plugins: WebPluginType.Android and WebPluginType.AndroidGecko. If both
-        /// plugins are installed in the same project, WebPluginType.AndroidGecko will be used by default.
+        /// Like CreateWebView(), but accepts an array of preferred plugin types
+        /// to override which 3D WebView plugin is used in the case where
+        /// multiple plugins are installed for the same build platform. For example,
+        /// there are two plugins for Android: WebPluginType.Android and WebPluginType.AndroidGecko.
+        /// If both plugins are installed in the same project, then WebPluginType.AndroidGecko is used by default.
         /// However, you can override this to force WebPluginType.Android to be used instead by passing
         /// `new WebPluginType[] { WebPluginType.Android }`.
-        /// </remarks>
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// // Create a new webview, specifying the following overrides for
+        /// // platforms where multiple plugins are installed:
+        /// // - Android: use WebPluginType.Android instead of WebPluginType.AndroidGecko.
+        /// // - macOS: use WebPluginType.MacWebKit instead of WebPluginType.Standalone.
+        /// var webView = Web.CreateWebView(new WebPluginType[] {
+        ///     WebPluginType.Android,
+        ///     WebPluginType.MacWebKit
+        /// });
+        /// </code>
+        /// </example>
         public static IWebView CreateWebView(WebPluginType[] preferredPlugins) {
 
             return _pluginFactory.GetDefaultPlugin(preferredPlugins).CreateWebView();
@@ -172,20 +200,12 @@ namespace Vuplex.WebView {
         /// This is useful, for example, to enable WebRTC support. Note that on
         /// macOS, Android, iOS, and UWP, [additional project configuration is needed in order to enable
         /// permission for the camera and microphone](https://support.vuplex.com/articles/webrtc).
-        /// Camera and microphone permissions are enabled together with a single method because on some platforms (Windows, macOS, UWP),
+        /// Camera and microphone permissions are enabled together with a single method because on some platforms (i.e. UWP),
         /// these permissions can only be enabled together and cannot be enabled separately.
         /// </summary>
         /// <remarks>
-        /// Important notes:
-        /// <list type="bullet">
-        ///   <item>
-        ///     On Windows and macOS, this method cannot be executed while the Chromium browser process is running. So, you will likely need to call it from Awake() to ensure that it's executed before Chromium is started. Alternatively, you can manually terminate Chromium prior to calling this method using StandaloneWebView.TerminateBrowserProcess().
-        ///   </item>
-        ///   <item>
-        ///     On iOS, enabling the camera and microphone is only supported in iOS 14.3 or newer
-        ///     and is only supported in Native 2D Mode.
-        ///   </item>
-        /// </list>
+        /// On iOS, enabling the camera and microphone is only supported in iOS 15 or newer
+        /// and is only supported in Native 2D Mode.
         /// </remarks>
         /// <example>
         /// <code>

@@ -1,0 +1,69 @@
+apply plugin: 'com.android.library'
+apply from: '../shared/keepUnitySymbols.gradle'
+**APPLY_PLUGINS**
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    
+    // --- REQUIRED for Kotlin/Compose AARs ---
+        implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
+    
+        // Compose runtime (fixes NoClassDefFoundError: SnapshotStateKt)
+        implementation platform("androidx.compose:compose-bom:2025.08.00")
+        implementation "androidx.compose.runtime:runtime"
+        implementation "androidx.compose.runtime:runtime-saveable"
+    
+        // --- OPTIONAL (only if your AAR actually references these APIs) ---
+        implementation "androidx.compose.ui:ui"                         // if you reference compose-ui classes
+        implementation "androidx.compose.material3:material3"           // if you use Material3 symbols
+        implementation "androidx.activity:activity-compose:1.10.1" // if you use ComposeView/Activity integrations
+    
+        implementation "androidx.core:core-ktx:1.15.0"                  // you listed this in the AAR
+        implementation "androidx.appcompat:appcompat:1.6.1"             // if your AAR references AppCompat
+    
+        // Json
+        implementation "com.google.code.gson:gson:2.10.1"
+    
+        // Debug-only (safe, ignored for release)
+        debugImplementation "androidx.compose.ui:ui-tooling"
+        debugImplementation "androidx.compose.ui:ui-tooling-preview"
+**DEPS**}
+
+android {
+    namespace "com.unity3d.player"
+    ndkPath "**NDKPATH**"
+    ndkVersion "**NDKVERSION**"
+
+    compileSdk **APIVERSION**
+    buildToolsVersion = "**BUILDTOOLS**"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdk **MINSDK**
+        targetSdk **TARGETSDK**
+        ndk {
+            abiFilters **ABIFILTERS**
+            debugSymbolLevel **DEBUGSYMBOLLEVEL**
+        }
+        versionCode **VERSIONCODE**
+        versionName '**VERSIONNAME**'
+        consumerProguardFiles 'proguard-unity.txt'**USER_PROGUARD**
+**DEFAULT_CONFIG_SETUP**
+    }
+    
+    lint {
+        abortOnError false
+    }
+
+    androidResources {
+        noCompress = **BUILTIN_NOCOMPRESS** + unityStreamingAssets.tokenize(', ')
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }**PACKAGING**
+}
+**IL_CPP_BUILD_SETUP**
+**SOURCE_BUILD_SETUP**
+**EXTERNAL_SOURCES**

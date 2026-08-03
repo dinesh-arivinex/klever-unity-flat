@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -39,10 +39,6 @@ namespace Vuplex.WebView.Internal {
         public void SetFallbackVideoRect(Rect rect) => this.Material.SetVector("_FallbackVideoRect", _toVector(rect));
 
         public void SetFallbackVideoTexture(Texture2D texture) => this.Material.SetTexture("_FallbackVideoTexture", texture);
-
-        public void SetPopoverRect(Rect rect) => this.Material.SetVector("_PopoverRect", _toVector(rect));
-
-        public void SetPopoverTexture(Texture2D texture) => this.Material.SetTexture("_PopoverTexture", texture);
 
         public void SetRenderBlackAsTransparent(bool enabled) => this.Material.SetFloat("_RenderBlackAsTransparent", enabled ? 1f : 0f);
 

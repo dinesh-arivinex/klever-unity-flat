@@ -2,7 +2,8 @@
     "name": "Vuplex.WebViewDemos",
     "rootNamespace": "",
     "references": [
-        "Vuplex.WebView"
+        "Vuplex.WebView",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

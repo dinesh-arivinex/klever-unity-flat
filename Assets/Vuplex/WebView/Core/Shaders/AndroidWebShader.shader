@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+﻿// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -142,6 +142,10 @@ Shader "Vuplex/Android Web Shader" {
                     void main() {
 
                         vec4 color = texture2D(_MainTex, uv);
+                        // See the comments in DefaultWebShader.shader about pre-multiplied alpha.
+                        if (color.w != 0.0) {
+                            color = vec4(color.xyz / color.w, color.w);
+                        }
                         // Use a threshold of 0.15 to consider a pixel as black.
                         if (_RenderBlackAsTransparent != 0.0 && all(lessThan(color.xyz, vec3(0.15, 0.15, 0.15)))) {
                             color = vec4(0.0, 0.0, 0.0, 0.0);

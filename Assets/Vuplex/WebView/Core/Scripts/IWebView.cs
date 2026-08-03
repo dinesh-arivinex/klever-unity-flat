@@ -1,4 +1,5 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// 2d11636f-615e-089e-8a91-11d4f663e330
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -319,15 +320,6 @@ namespace Vuplex.WebView {
         /// For example, Texture2D.GetRawTextureData() and ImageConversion.EncodeToPNG()
         /// fail for external textures. To compensate, the IWebView interface includes
         /// its own GetRawTextureData() and CaptureScreenshot() methods to replace them.
-        /// </para>
-        /// <para>
-        /// Another quirk of this texture is that Unity always reports its size as
-        /// 1300px × 1300px in the editor. In reality, 3D WebView resizes the
-        /// texture in native code to match the dimensions of the webview, but
-        /// Unity doesn't provide an API to notify the engine that an external texture's size
-        /// has changed. So, Unity always reports its size as the initial size that was
-        /// passed to Texture2D.CreateExternalTexture(), which in 3D WebView's case is
-        /// 1300px × 1300px.
         /// </para>
         /// </remarks>
         /// <example>

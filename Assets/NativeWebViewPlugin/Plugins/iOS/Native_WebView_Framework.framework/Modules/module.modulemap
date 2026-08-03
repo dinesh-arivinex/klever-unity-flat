@@ -1,0 +1,11 @@
+framework module Native_WebView_Framework {
+  umbrella header "Native_WebView_Framework.h"
+  export *
+
+  module * { export * }
+}
+
+module Native_WebView_Framework.Swift {
+  header "Native_WebView_Framework-Swift.h"
+  requires objc
+}

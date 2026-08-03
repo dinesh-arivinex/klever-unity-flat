@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Vuplex Inc. All rights reserved.
+// Copyright (c) 2026 Vuplex Inc. All rights reserved.
 //
 // Licensed under the Vuplex Commercial Software Library License, you may
 // not use this file except in compliance with the License. You may obtain
@@ -17,7 +17,7 @@ using UnityEngine;
 namespace Vuplex.WebView {
 
     /// <summary>
-    /// Interface used on iOS for the
+    /// Interface used on iOS and visionOS for the
     /// <seealso href="https://support.vuplex.com/articles/fallback-video">fallback video implementation</seealso>.
     /// </summary>
     public interface IWithFallbackVideo {

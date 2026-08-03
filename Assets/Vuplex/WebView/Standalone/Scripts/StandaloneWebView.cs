@@ -1040,7 +1040,7 @@ namespace Vuplex.WebView {
             #endif
             PopoverTexture.UpdateExternalTexture(nativeTexture);
             if (previousNativeTexture != IntPtr.Zero) {
-                _destroyNativeTexture(previousNativeTexture);
+                //_destroyNativeTexture(previousNativeTexture);
             }
         }
 
