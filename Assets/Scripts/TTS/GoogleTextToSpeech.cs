@@ -155,8 +155,10 @@ public class GoogleTextToSpeech : MonoBehaviour
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(payload);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
-        request.SetRequestHeader("Content-Type", "application/json");
-        request.SetRequestHeader("charset", "utf-8");
+        // Keep charset as a Content-Type parameter. A separate custom "charset"
+        // header makes browsers include it in the WebGL CORS preflight, which the
+        // Google Translation endpoint does not allow.
+        request.SetRequestHeader("Content-Type", "application/json; charset=utf-8");
 
         // Send the request
         yield return request.SendWebRequest();
