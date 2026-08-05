@@ -4,11 +4,10 @@ using System.Collections;
 
 public class ContinuousInternetCheck : MonoBehaviour
 {
-    // URL to ping to check for internet connectivity.
-    private string testUrl = "http://google.com";
     // Time interval in seconds to check the internet connection.
     private float checkInterval = 10f; // Adjust the interval as needed.
     public GameObject internteCanva;
+
     void Start()
     {
         // Start checking the internet connection at regular intervals.
@@ -22,20 +21,33 @@ public class ContinuousInternetCheck : MonoBehaviour
 
     private IEnumerator CheckInternetConnectionCoroutine()
     {
-        UnityWebRequest request = new UnityWebRequest(testUrl);
-        request.method = UnityWebRequest.kHttpVerbHEAD;
-
-        yield return request.SendWebRequest();
-
-        if (request.error != null)
+        // Probe the service the experience actually depends on. Both Klever API
+        // hosts permit the WebGL origin, unlike arbitrary sites such as Google.
+        string healthUrl = Klass.Net.KlassEndpoints.BackendBase + "/health";
+        using (UnityWebRequest request = UnityWebRequest.Head(healthUrl))
         {
-            DebugUtil.Log("No internet connection: " + request.error);
-            internteCanva.SetActive(true);
+            yield return request.SendWebRequest();
+
+            bool isOnline = request.result == UnityWebRequest.Result.Success;
+            if (!isOnline)
+            {
+                DebugUtil.Log("No internet connection: " + request.error);
+            }
+            else
+            {
+                DebugUtil.Log("Internet connection is available.");
+            }
+
+            SetInternetStatus(isOnline);
         }
-        else
+    }
+
+    private void SetInternetStatus(bool isOnline)
+    {
+        bool shouldShowOfflineCanvas = !isOnline;
+        if (internteCanva != null && internteCanva.activeSelf != shouldShowOfflineCanvas)
         {
-            DebugUtil.Log("Internet connection is available.");
-            internteCanva.SetActive(false);
+            internteCanva.SetActive(shouldShowOfflineCanvas);
         }
     }
 }

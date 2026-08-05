@@ -4,7 +4,9 @@ using SimpleJSON;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+#if !UNITY_WEBGL || UNITY_EDITOR
 using System.Threading.Tasks;
+#endif
 
 using UnityEngine;
 using UnityEngine.Events;
@@ -147,10 +149,18 @@ public class API : MonoBehaviour
                     // `spaceData[0]["session"]` before the loading panel showed.
                     JSONNode spaceData = null;
                     bool isParsingDone = false;
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    // WebGL has no managed background threads. Task.Run can leave
+                    // the loading coroutine waiting forever, so parse on Unity's
+                    // main thread for the browser build.
+                    try { spaceData = JSONNode.Parse(jsonData); } catch { spaceData = null; }
+                    isParsingDone = true;
+#else
                     Task.Run(() => {
                         try { spaceData = JSONNode.Parse(jsonData); } catch { spaceData = null; }
                         isParsingDone = true;
                     });
+#endif
                     yield return new WaitUntil(() => isParsingDone);
                     if (spaceData == null || spaceData.Count == 0 || spaceData[0] == null)
                     {
