@@ -42,6 +42,14 @@ public class NumpadController : MonoBehaviour
             // Skip self and the screen object
             if (child == this.transform || child == screenObj) continue;
 
+            // CRITICAL FIX: Skip Text labels inside buttons so they don't intercept rays and cause double clicks!
+            if (child.GetComponent<TextMeshProUGUI>() != null || child.GetComponent<Text>() != null || child.GetComponent<TextMeshPro>() != null)
+            {
+                NumpadButtonClickHandler accidentalHandler = child.GetComponent<NumpadButtonClickHandler>();
+                if (accidentalHandler != null) Destroy(accidentalHandler);
+                continue;
+            }
+
             string objName = child.gameObject.name.ToLower();
             
             // Determine the button's purpose from its name
@@ -66,11 +74,18 @@ public class NumpadController : MonoBehaviour
                 
                 if (btn != null)
                 {
-                    // Hook into the standard Button's onClick event
-                    btn.onClick.RemoveAllListeners(); // Prevent duplicates if the user already added them manually
-                    if (isNumber) btn.onClick.AddListener(() => OnNumberClicked(number.ToString()));
-                    else if (isBackspace) btn.onClick.AddListener(OnBackspaceClicked);
-                    else if (isEnter) btn.onClick.AddListener(OnEnterClicked);
+                    // Prevent double firing: remove the custom handler if it was added previously or manually
+                    NumpadButtonClickHandler oldHandler = child.GetComponent<NumpadButtonClickHandler>();
+                    if (oldHandler != null) Destroy(oldHandler);
+
+                    // Hook into the standard Button's onClick event ONLY if it hasn't been set up in the inspector
+                    if (btn.onClick.GetPersistentEventCount() == 0)
+                    {
+                        btn.onClick.RemoveAllListeners();
+                        if (isNumber) btn.onClick.AddListener(() => OnNumberClicked(number.ToString()));
+                        else if (isBackspace) btn.onClick.AddListener(OnBackspaceClicked);
+                        else if (isEnter) btn.onClick.AddListener(OnEnterClicked);
+                    }
                 }
                 else
                 {
@@ -121,14 +136,23 @@ public class NumpadController : MonoBehaviour
         return null;
     }
 
+    private int lastClickFrame = -1;
+
     public void OnNumberClicked(string number)
     {
+        // If this function was already called this exact frame, ignore it!
+        if (Time.frameCount == lastClickFrame) return;
+        lastClickFrame = Time.frameCount;
+
         currentText += number;
         UpdateDisplay();
     }
 
     public void OnBackspaceClicked()
     {
+        if (Time.frameCount == lastClickFrame) return;
+        lastClickFrame = Time.frameCount;
+
         if (currentText.Length > 0)
         {
             currentText = currentText.Substring(0, currentText.Length - 1);
@@ -138,6 +162,9 @@ public class NumpadController : MonoBehaviour
 
     public void OnEnterClicked()
     {
+        if (Time.frameCount == lastClickFrame) return;
+        lastClickFrame = Time.frameCount;
+
         onEnterPressed?.Invoke(currentText);
     }
 
