@@ -1,5 +1,6 @@
 
 using GLTFast.Schema;
+using NativeWebView;
 using SimpleJSON;
 using System;
 using System.Collections;
@@ -71,13 +72,13 @@ public class API : MonoBehaviour
     private void Start()
     {
         room = GameManager.Instance.changeClassRoom;
-        webManager = GameManager.Instance.webManager;
         threesixtyImageManager = GameManager.Instance.threesixtyImageManager;
         assetDownloader = GameManager.Instance.assetDownloader;
         VrManager = GameManager.Instance.vrManager;
         addingImage = GameManager.Instance.addingImage;
         serviceScript = GameManager.Instance.serviceScript;
         videoManager = GameManager.Instance.videoManager;
+        webManager = GameManager.Instance.webManager;
 
         CallingClassVrExperiance();
     }
@@ -295,8 +296,9 @@ public class API : MonoBehaviour
  
                                  if (!string.IsNullOrEmpty(simulationURL))
                                  {
-                                     webManager.AssignSimulationAsync(displayTime, simulationURL, simulationScript);
- 
+                                     //webManager.AssignSimulationAsync(displayTime, simulationURL, simulationScript);
+                                     WebViewController.Instance.AssignSimulation(displayTime);
+                                     WebViewController.Instance._fallbackUrl = simulationURL;
                                      DebugUtil.Log("Simulation URL: " + simulationURL);
                                      DebugUtil.Log("Display Time: " + displayTime);
                                  }

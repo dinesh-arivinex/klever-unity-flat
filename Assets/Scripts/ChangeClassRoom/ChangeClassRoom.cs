@@ -87,7 +87,6 @@ public class ChangeClassRoom : MonoBehaviour
                 dummyBoard.SetActive(false);
                 boardUI.position = boardUIPosA.position;
                 boardUI.rotation = boardUIPosA.rotation;
-                webManager.temp = classRoomASimulPos;
                 Gamification.position = classRoomAGamPos.position;
                 Gamification.rotation = classRoomAGamPos.rotation;
                 break;
@@ -100,7 +99,6 @@ public class ChangeClassRoom : MonoBehaviour
                 dummyBoard.SetActive(false);
                 boardUI.position = boardUIPosB.position;
                 boardUI.rotation = boardUIPosB.rotation;
-                webManager.temp = classRoomBSimulPos;
                 Gamification.position = classRoomBGamPos.position;
                 Gamification.rotation = classRoomBGamPos.rotation;
                 break;
@@ -115,7 +113,6 @@ public class ChangeClassRoom : MonoBehaviour
                 dummyBoard.SetActive(false);
                 boardUI.position = boardUIPosC.position;
                 boardUI.rotation = boardUIPosC.rotation;
-                webManager.temp = classRoomCSimulPos;
                 Gamification.position = classRoomCGamPos.position;
                 Gamification.rotation = classRoomCGamPos.rotation;
                 break;

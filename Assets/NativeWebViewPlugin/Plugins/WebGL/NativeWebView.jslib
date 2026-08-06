@@ -37,7 +37,26 @@ mergeInto(LibraryManager.library, {
             container.style.background = "transparent";
             container.style.zIndex = "2147483000";
             container.style.display = "none";
-            document.body.appendChild(container);
+            var canvas = document.querySelector("#unity-canvas") || document.querySelector("canvas");
+            var parent = canvas ? canvas.parentNode : document.body;
+            parent.appendChild(container);
+
+            if (canvas && !canvas.__fullscreenIntercepted) {
+              var origFn = canvas.requestFullscreen || canvas.webkitRequestFullscreen || canvas.mozRequestFullScreen || canvas.msRequestFullscreen;
+              if (origFn) {
+                var newFn = function(options) {
+                  var p = canvas.parentNode;
+                  var pFn = p.requestFullscreen || p.webkitRequestFullscreen || p.mozRequestFullScreen || p.msRequestFullscreen;
+                  if (pFn) return pFn.call(p, options);
+                  return origFn.call(canvas, options);
+                };
+                canvas.requestFullscreen = newFn;
+                canvas.webkitRequestFullscreen = newFn;
+                canvas.mozRequestFullScreen = newFn;
+                canvas.msRequestFullscreen = newFn;
+                canvas.__fullscreenIntercepted = true;
+              }
+            }
           }
 
           this.updateContainerBounds();
@@ -46,19 +65,15 @@ mergeInto(LibraryManager.library, {
 
         updateContainerBounds: function() {
           var container = document.getElementById(this.containerId);
-          if (!container) {
-            return;
-          }
+          if (!container) return;
+          var canvas = document.querySelector("#unity-canvas") || document.querySelector("canvas");
+          if (!canvas) return;
 
-          var rect = this.getCanvasRect();
-          if (!rect) {
-            return;
-          }
-
-          container.style.left = rect.left + "px";
-          container.style.top = rect.top + "px";
-          container.style.width = rect.width + "px";
-          container.style.height = rect.height + "px";
+          container.style.position = "absolute";
+          container.style.left = canvas.offsetLeft + "px";
+          container.style.top = canvas.offsetTop + "px";
+          container.style.width = canvas.offsetWidth + "px";
+          container.style.height = canvas.offsetHeight + "px";
         },
 
         ensureResizeHandler: function() {
@@ -258,7 +273,7 @@ mergeInto(LibraryManager.library, {
             }
           }
 
-          return {
+          var result = {
             top: this.nonNegative(this.normalizeNumber(padding.top, 0)),
             bottom: this.nonNegative(this.normalizeNumber(padding.bottom, 0)),
             leading: this.nonNegative(this.normalizeNumber(padding.leading, 0)),
@@ -266,6 +281,17 @@ mergeInto(LibraryManager.library, {
             enableRoundCorners: !!padding.enableRoundCorners,
             roundCornerRadius: this.nonNegative(this.normalizeNumber(padding.roundCornerRadius, 0))
           };
+          
+          var canvas = document.querySelector("#unity-canvas") || document.querySelector("canvas");
+          if (canvas && canvas.width > 0 && canvas.height > 0) {
+            var scaleX = canvas.clientWidth / canvas.width;
+            var scaleY = canvas.clientHeight / canvas.height;
+            result.top *= scaleY;
+            result.bottom *= scaleY;
+            result.leading *= scaleX;
+            result.trailing *= scaleX;
+          }
+          return result;
         },
 
         resolveIcon: function(iconToken, fallback) {

@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/KlassMeta.unity
     guid: bb09c2c3b6fd3b34b92b8686ea77ac55
   - enabled: 0
@@ -20,7 +20,7 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/NativeWebViewPlugin/Scenes/SampleScene.unity
     guid: 7b33e4bf47f444ddd934d6a135216650
-  - enabled: 1
+  - enabled: 0
     path: Assets/NativeWebViewPlugin/Scenes/SampleScene 1.unity
     guid: 712fc1d8b6922b8449cde616ff44391a
   m_configObjects:

@@ -45,6 +45,7 @@ public class ServiceScript : MonoBehaviour
     private DeviceSynHandler deviceSynHandler;
     private WebManager webManager;
 
+
     private RuntimeImportBehaviourHelper runtimeImportBehaviourHelper;
     private ThreesixtyImageManager threesixtyImageManager;
     public LoadingBar loadingBar;
@@ -188,7 +189,8 @@ public class ServiceScript : MonoBehaviour
        
         WithoutSkippingModel.Invoke();
         // StartMCQ();
-        webManager.StartSimulation();
+        //webManager.StartSimulation();
+        GameManager.Instance.simulationManagerObj.SetActive(true);
        // ThreesixtyVideoExperiance();
        //
 
