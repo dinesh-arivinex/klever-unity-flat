@@ -126,13 +126,16 @@ public class Ontrigger : MonoBehaviour
 
     private void SpawnBall()
     {
+        GamificationControllerHandSwitcher handSwitcher = GamificationControllerHandSwitcher.Instance;
+        bool isHandMode = handSwitcher != null && handSwitcher.isHandMode;
+
         if (gamificationManager.currentGameName == "Basketball")
         {
             BasketBallAudioClip.Play();
-            if (!GamificationControllerHandSwitcher.Instance.isHandMode)
+            if (!isHandMode)
             {
-                ballVisualize.SetActive(false);    
-                GamificationControllerHandSwitcher.Instance.handPoseBall.SetActive(false);
+                ballVisualize.SetActive(false);
+                SetActiveIfPresent(handSwitcher != null ? handSwitcher.handPoseBall : null, false);
                 GameObject newBall = Instantiate(basketBall, destination.position, Quaternion.identity);
                 SpawnObject spawn = FindAnyObjectByType<SpawnObject>();
                 spawn.SetStartPointAndDestination(fallpoint, optionSelection.isBasketBall, staringPoint, destination);
@@ -140,8 +143,8 @@ public class Ontrigger : MonoBehaviour
             else
             {
                 ballVisualizeHandMode.SetActive(false);
-                GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(true);
-                GamificationControllerHandSwitcher.Instance.handPoseBallHandMode.SetActive(true);
+                SetActiveIfPresent(handSwitcher.rightHandMesh, true);
+                SetActiveIfPresent(handSwitcher.handPoseBallHandMode, true);
                 GameObject newBall = Instantiate(basketBall, destinationHandMode.position, Quaternion.identity);
                 SpawnObject spawn = FindAnyObjectByType<SpawnObject>();
                 spawn.SetStartPointAndDestination(fallpoint, optionSelection.isBasketBall, staringPoint, destinationHandMode);
@@ -151,7 +154,7 @@ public class Ontrigger : MonoBehaviour
         if (gamificationManager.currentGameName == "Archery")
         {
             ArrowAudioClip.Play();
-            if (!GamificationControllerHandSwitcher.Instance.isHandMode)
+            if (!isHandMode)
             {
                 arrowVisualize.SetActive(false);
                 destination = staringPointArrow;
@@ -163,7 +166,7 @@ public class Ontrigger : MonoBehaviour
             {
                 arrowVisualizeHandMode.SetActive(false);
                 destinationHandMode = staringPointArrowHandMode;
-                GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(false);
+                SetActiveIfPresent(handSwitcher.rightHandMesh, false);
                 GameObject newBall = Instantiate(arrow, arrowVisualizeHandMode.transform.position, arrowVisualizeHandMode.transform.rotation);
                 SpawnObject spawn = FindAnyObjectByType<SpawnObject>();
                 spawn.SetStartPointAndDestination(fallpoint, optionSelection.isBasketBall, staringPoint, destinationHandMode);
@@ -175,6 +178,14 @@ public class Ontrigger : MonoBehaviour
         {
             yield return new WaitForSeconds(3);
             gameType.nextButton.gameObject.GetComponent<BoxCollider>().enabled = true;
+        }
+    }
+
+    private static void SetActiveIfPresent(GameObject target, bool active)
+    {
+        if (target != null)
+        {
+            target.SetActive(active);
         }
     }
 

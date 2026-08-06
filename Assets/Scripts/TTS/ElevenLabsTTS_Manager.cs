@@ -3,15 +3,19 @@ using UnityEngine.Networking;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+#if !UNITY_WEBGL || UNITY_EDITOR
 using System.IO;
+#endif
 using TMPro;
 
 public class ElevenLabsTTS_Manager : MonoBehaviour
 {
     // The API endpoint URL
     private string[] voices = { "21m00Tcm4TlvDq8ikWAM", "29vD33N1CtxCmqQRPOHJ", "2EiwWnXFnvU5JabPnv8n", "5Q0t7uMcjvnagumLfvZi", "AZnzlk1XvdvUeBnXmlld", "CYw3kZ02Hs0563khs1Fj", "D38z5RcWu1voky8WS1ja", "EXAVITQu4vr4xnSDxMaL", "ErXwobaYiN019PkySvjV", "GBv7mTt0atIp3Br8iCZE", "IKne3meq5aSn9XLyUdCD", "JBFqnCBsd6RMkjVDRZzb", "LcfcDJNUP1GQjkzn1xUU", "MF3mGyEYCl7XYWbV9V6O", "N2lVS1w4EtoT3dr4eOWO", "ODq5zmih8GrVes37Dizd", "SOYHLrjzK2X1ezoPC6cr", "TX3LPaxmHKxFdv7VOQHJ", "ThT5KcBeYPX3keUQqHPh", "TxGEqnHWrfWFTfGW9XjX", "VR6AewLTigWG4xSOukaG", "XB0fDUnXU5powFXDhCwa", "XrExE9yKIg1WjnnlVkGX", "Yko7PKHZNXotIFUBG7I9", "ZQe5CZNOzWyzPSCn5a3c", "Zlb1dXrM653N07WRdFW3", "bVMeCyTHy58xNoL34h3p", "flq6f7yk4E4fJM5XTYuZ", "g5CIjZEefAph4nQFvHAz", "jBpfuIE2acCO8z3wKNLl", "jsCqWAovK2LkecY7zXl4", "knrPHWnBmmDHMoiMeP3l", "oWAxZDx7w5VEj9dCyTzz", "onwK4e9ZLuTAKqWW03F9", "pFZP5JQG7iQjIQuC4Bku", "pMsXgVXv3BLzUgSXRplE", "pNInz6obpgDQGcFmaJgB", "piTKgcLEGmPE4e6mEKli", "pqHfZKP75CvOlQylNhV4", "t0jbNlBVZ17f02VDIeMI", "wViXBPUzp2ZZixB1xQuM", "yoZ06aMxZJJ28mfd3POQ", "z9fAnlkpzviPz146aGWa", "zcAOhNBS3c14rBihAFp1", "zrHiDhphv9ZnVXBqCLjz"};
+#if !UNITY_WEBGL || UNITY_EDITOR
     private string apiUrl = "https://api.elevenlabs.io/v1/text-to-speech/";
     private string ApiKey = "f0e2a240bc6900199fb0cbc185a8bdae";
+#endif
 
     private AudioSource Audio;/*
     public TMP_InputField Inputfield;*/
@@ -106,17 +110,24 @@ public class ElevenLabsTTS_Manager : MonoBehaviour
                 //Testing purpose
                 Initialization();*/
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         StartELTTS("hai. arul how are you");
+#endif
     }
 
     // Use this function for developement
     public void StartELTTS(string input)
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        DebugUtil.LogWarning("ElevenLabs TTS is disabled in WebGL until a secure backend proxy is configured.");
+#else
         //Input transcription text
         InputText = input;
         StartCoroutine(SendPostRequest());
+#endif
     }    
 
+#if !UNITY_WEBGL || UNITY_EDITOR
     IEnumerator SendPostRequest()
     {
         string api = apiUrl + Voice_Id;
@@ -196,6 +207,7 @@ public class ElevenLabsTTS_Manager : MonoBehaviour
             DebugUtil.LogError("File not found: " + filePath);
         }
     }
+#endif
 
 
 

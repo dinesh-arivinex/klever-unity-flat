@@ -4,8 +4,12 @@ using System.Collections;
 using System.IO;
 using System.Collections.Generic;
 using System;
+using System.Globalization;
 using UnityEngine.Events;
 using SimpleJSON;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
 public enum Language
 {
     Spanish,
@@ -17,6 +21,13 @@ public enum Language
 
 public class GoogleTextToSpeech : MonoBehaviour
 {
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern void KleverPlayBase64Audio(string base64Audio, string objectName, float volume);
+
+    [DllImport("__Internal")]
+    private static extern void KleverStopBase64Audio();
+#endif
    
     public  enum GendeR
     {
@@ -182,11 +193,15 @@ public class GoogleTextToSpeech : MonoBehaviour
     }
     public void StopAudio()
     {
-        if (audioSource.isPlaying)
+#if UNITY_WEBGL && !UNITY_EDITOR
+        KleverStopBase64Audio();
+        IsAudioReady = false;
+#else
+        if (audioSource != null && audioSource.isPlaying)
         {
-
             audioSource.Stop();
         }
+#endif
     }
 IEnumerator SendTextToSpeechRequest(string text)
     {
@@ -240,10 +255,23 @@ IEnumerator SendTextToSpeechRequest(string text)
     }
     void DecodeAndPlayAudio(string base64AudioContent)
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        try
+        {
+            IsAudioReady = false;
+            audioClipLength = 0f;
+            float volume = audioSource != null ? audioSource.volume : 1f;
+            KleverPlayBase64Audio(base64AudioContent, gameObject.name, volume);
+        }
+        catch (Exception e)
+        {
+            DebugUtil.LogError("Error starting WebGL audio: " + e.Message);
+        }
+#else
         try
         {
             byte[] audioData = Convert.FromBase64String(base64AudioContent);
-            string fileName = "temp_audio_" + DateTime.Now.Ticks + ".wav"; // You may want to change the file ext 
+            string fileName = "temp_audio_" + DateTime.Now.Ticks + ".mp3";
             string fullPath = Path.Combine(Application.persistentDataPath, fileName);
             File.WriteAllBytes(fullPath, audioData);
 
@@ -260,7 +288,38 @@ IEnumerator SendTextToSpeechRequest(string text)
         {
             DebugUtil.LogError("Error decoding audio: " + e.Message);
         }
+#endif
     }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    public void OnWebGLAudioStarted(string durationSeconds)
+    {
+        if (!float.TryParse(durationSeconds, NumberStyles.Float, CultureInfo.InvariantCulture, out float duration))
+        {
+            duration = 0f;
+        }
+
+        audioClipLength = Mathf.Max(0f, duration);
+        IsAudioReady = true;
+    }
+
+    public void OnWebGLAudioFinished(string unused)
+    {
+        IsAudioReady = false;
+        HandlePlaybackCompleted();
+    }
+
+    public void OnWebGLAudioStopped(string unused)
+    {
+        IsAudioReady = false;
+    }
+
+    public void OnWebGLAudioError(string message)
+    {
+        IsAudioReady = false;
+        DebugUtil.LogError("WebGL audio playback failed: " + message);
+    }
+#endif
 
     IEnumerator LoadAndPlayAudio(string path)
     {
@@ -281,19 +340,7 @@ IEnumerator SendTextToSpeechRequest(string text)
                 yield return new WaitForSeconds(audioClip.length);
                 
                 IsAudioReady = false;
-
-                MyUtilityClass utilityInstance = new MyUtilityClass(() =>
-                {
-
-                    DebugUtil.Log("Performing the custom action!");
-                });
-                
-         
-                if(isFirstTime)
-                {
-                    serviceScript.AssignTaskBasedOnCondition(gameStatus);
-                    isFirstTime = false;
-                }
+                HandlePlaybackCompleted();
                 
                 File.Delete(path);
             }
@@ -302,6 +349,25 @@ IEnumerator SendTextToSpeechRequest(string text)
                 DebugUtil.LogError("Error loading audio file: " + www.error);
             }
         }
+    }
+
+    private void HandlePlaybackCompleted()
+    {
+        if (!isFirstTime)
+        {
+            return;
+        }
+
+        if (serviceScript != null)
+        {
+            serviceScript.AssignTaskBasedOnCondition(gameStatus);
+        }
+        else
+        {
+            DebugUtil.LogWarning("TTS playback completed before ServiceScript was available.");
+        }
+
+        isFirstTime = false;
     }
 
 

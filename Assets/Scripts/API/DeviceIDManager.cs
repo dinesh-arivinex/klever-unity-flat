@@ -72,7 +72,7 @@ public class DeviceIDManager : MonoBehaviour
         req.certificateHandler = new BypassCertificateHandler();
         //Send the request then wait here until it returns
         yield return req.SendWebRequest();
-        if (req.isNetworkError) // error in request
+        if (req.result != UnityWebRequest.Result.Success)
         {
             DebugUtil.Log("Error While Sending: " + req.error);
         }
@@ -82,17 +82,14 @@ public class DeviceIDManager : MonoBehaviour
             DebugUtil.Log("return" + req.downloadHandler.text);
             string  Responses = req.downloadHandler.text;
             ApiResponse response = JsonUtility.FromJson<ApiResponse>(Responses);
-            if (response.message == "Device created successfully")
+            if (response != null && response.message == "Device created successfully")
             {
                 truePanel.SetActive(true);
                // ToggleFunction(true);
                //  apiManager.CallingClassVrExperiance();
                 gameObject.SetActive(false);
                 Invoke("ReloadScene", 1);
-                GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(false);
-                GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(false);
-                GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(false);
-                GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(false);
+                DisableVrInteractionRays();
             }
             else
             {
@@ -152,6 +149,28 @@ public class DeviceIDManager : MonoBehaviour
         {
             // Always accept
             return true;
+        }
+    }
+
+    private static void DisableVrInteractionRays()
+    {
+        GamificationControllerHandSwitcher switcher = GamificationControllerHandSwitcher.Instance;
+        if (switcher == null)
+        {
+            return;
+        }
+
+        SetActiveIfPresent(switcher.leftHandRaycast, false);
+        SetActiveIfPresent(switcher.rightHandRaycast, false);
+        SetActiveIfPresent(switcher.leftControllerRaycast, false);
+        SetActiveIfPresent(switcher.rightControllerRaycast, false);
+    }
+
+    private static void SetActiveIfPresent(GameObject target, bool active)
+    {
+        if (target != null)
+        {
+            target.SetActive(active);
         }
     }
 

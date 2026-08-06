@@ -200,7 +200,7 @@ public class GamificationManager : MonoBehaviour
                     arrowVisualizeHandMode.SetActive(true);
                     arrowVisualizeHandMode.GetComponent<MeshRenderer>().enabled = true;
                     crossbowHandMode.SetActive(true); 
-                    GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(false);
+                    SetRightHandMeshActive(false);
                     break;
                 case "Basketball":
                    //  basketBallScore++;
@@ -214,7 +214,7 @@ public class GamificationManager : MonoBehaviour
                     crossbowHandMode.SetActive(false);
                     ballVisualize.SetActive(true);
                     ballVisualizeHandMode.SetActive(true);
-                    GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(false);
+                    SetRightHandMeshActive(false);
                     gamificationCollider.SetActive(true);
                     basketballGame.GetComponent<BasketBallQuiz>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
                     break;
@@ -223,7 +223,7 @@ public class GamificationManager : MonoBehaviour
                     crossbowHandMode.SetActive(false);
                     ballVisualize.SetActive(false);
                     ballVisualizeHandMode.SetActive(false);
-                    GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(true);
+                    SetRightHandMeshActive(true);
                     mcqGame.GetComponent<QuizManagers>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
                     mcqGame.SetActive(true);
                     break;
@@ -250,11 +250,8 @@ public class GamificationManager : MonoBehaviour
             rightcontroller1.GetComponent<SkinnedMeshRenderer>().enabled = true;
         }
             
-        GamificationControllerHandSwitcher.Instance.rightHandMesh.SetActive(true);
-        GamificationControllerHandSwitcher.Instance.leftHandRaycast.SetActive(false);
-        GamificationControllerHandSwitcher.Instance.rightHandRaycast.SetActive(false);
-        GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(false);
-        GamificationControllerHandSwitcher.Instance.rightControllerRaycast.SetActive(false);
+        SetRightHandMeshActive(true);
+        SetVrRaycastsActive(false);
         DeviceSynHandler.isGameOver = true;
         thankyouCanvas.SetActive(true);
         GameManager.Instance.AssessmentParent.SetActive(false);
@@ -369,6 +366,37 @@ public class GamificationManager : MonoBehaviour
         }
 
 
+    }
+
+    private static void SetRightHandMeshActive(bool active)
+    {
+        GamificationControllerHandSwitcher switcher = GamificationControllerHandSwitcher.Instance;
+        if (switcher != null && switcher.rightHandMesh != null)
+        {
+            switcher.rightHandMesh.SetActive(active);
+        }
+    }
+
+    private static void SetVrRaycastsActive(bool active)
+    {
+        GamificationControllerHandSwitcher switcher = GamificationControllerHandSwitcher.Instance;
+        if (switcher == null)
+        {
+            return;
+        }
+
+        SetActiveIfPresent(switcher.leftHandRaycast, active);
+        SetActiveIfPresent(switcher.rightHandRaycast, active);
+        SetActiveIfPresent(switcher.leftControllerRaycast, active);
+        SetActiveIfPresent(switcher.rightControllerRaycast, active);
+    }
+
+    private static void SetActiveIfPresent(GameObject target, bool active)
+    {
+        if (target != null)
+        {
+            target.SetActive(active);
+        }
     }
     public void CallingThankyouOutSide()
     {
