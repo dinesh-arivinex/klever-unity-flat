@@ -245,7 +245,7 @@ namespace NativeWebView
 
         internal void EnableToolbar(bool enabled)
         {
-            toolbar.isToolbarVisible = enabled;
+            toolbar.isToolbarVisible = false;
         }
 
         internal void SetToolbarSize(int size)

@@ -180,7 +180,7 @@ namespace NativeWebView
     [System.Serializable]
     public class Toolbar
     {
-        public bool isToolbarVisible = true;
+        public bool isToolbarVisible = false;
         public string toolbarColor = "#0066b2";
         public float titleSize = 20.0f;
         public string title = "Assets For Devs";

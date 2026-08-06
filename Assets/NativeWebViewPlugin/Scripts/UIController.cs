@@ -146,6 +146,7 @@ namespace NativeWebView
             _open.onClick.AddListener(BuildWebView);
 
             InitializeValues();
+            BuildWebView();
         }
 
         public void OpenColorPicker(TMPro.TMP_InputField inputField)
