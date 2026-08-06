@@ -1,12 +1,5 @@
 fileFormatVersion: 2
 guid: 37ca5b92906dcc14a8e63015bc575e28
-AssetOrigin:
-  serializedVersion: 1
-  productId: 150497
-  packageName: Flexible Color Picker
-  packageVersion: 2.5.0
-  assetPath: Assets/FlexibleColorPicker/Sprites/DefGrad_V_Hor.png
-  uploadId: 504863
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -148,3 +141,10 @@ TextureImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269796
+  packageName: Multi-Platform Webview
+  packageVersion: 2.0.2
+  assetPath: Assets/NativeWebViewPlugin/FlexibleColorPicker/Sprites/DefGrad_V_Hor.png
+  uploadId: 950564

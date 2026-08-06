@@ -1,2 +1,9 @@
 fileFormatVersion: 2
 guid: 1cf5cd774f6e45dc8dc096679824b4ec
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269796
+  packageName: Multi-Platform Webview
+  packageVersion: 2.0.2
+  assetPath: Assets/NativeWebViewPlugin/Editor/IOSFrameworkPostProcessor.cs
+  uploadId: 950564

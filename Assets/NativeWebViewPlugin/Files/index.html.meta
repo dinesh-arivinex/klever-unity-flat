@@ -5,3 +5,10 @@ TextScriptImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269796
+  packageName: Multi-Platform Webview
+  packageVersion: 2.0.2
+  assetPath: Assets/NativeWebViewPlugin/Files/index.html
+  uploadId: 950564

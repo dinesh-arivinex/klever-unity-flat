@@ -1,7 +1,7 @@
 ﻿
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.XR.Interaction.Toolkit;
+
 using UnityEngine.XR.Interaction.Toolkit.Transformers;
 
 namespace TriLibCore.Samples
@@ -139,12 +139,12 @@ namespace TriLibCore.Samples
                 }
 
                 
-                XRGrabInteractable xrGrabInteractable = firstChild.GetComponent<XRGrabInteractable>();
+                UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable xrGrabInteractable = firstChild.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
                 if (xrGrabInteractable == null)
                 {
                     
-                    xrGrabInteractable = firstChild.gameObject.AddComponent<XRGrabInteractable>();
-                    firstChild.gameObject.GetComponent<XRGrabInteractable>().useDynamicAttach = true;
+                    xrGrabInteractable = firstChild.gameObject.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+                    firstChild.gameObject.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>().useDynamicAttach = true;
                 
                    
                 }

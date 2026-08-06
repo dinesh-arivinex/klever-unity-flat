@@ -1,11 +1,9 @@
 fileFormatVersion: 2
 guid: 3032a1de095f947e9b1812a02875f2ed
-MonoImporter:
-  externalObjects: {}
-  serializedVersion: 2
-  defaultReferences: []
-  executionOrder: 0
-  icon: {instanceID: 0}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269796
+  packageName: Multi-Platform Webview
+  packageVersion: 2.0.2
+  assetPath: Assets/NativeWebViewPlugin/Plugins/WebViewBuilder.cs
+  uploadId: 950564

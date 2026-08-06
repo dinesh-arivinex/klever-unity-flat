@@ -8,8 +8,8 @@ NativeFormatImporter:
   assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
-  productId: 150497
-  packageName: Flexible Color Picker
-  packageVersion: 2.5.0
-  assetPath: Assets/FlexibleColorPicker/Materials/FCP_AlphaPreview.mat
-  uploadId: 504863
+  productId: 269796
+  packageName: Multi-Platform Webview
+  packageVersion: 2.0.2
+  assetPath: Assets/NativeWebViewPlugin/FlexibleColorPicker/Materials/FCP_AlphaPreview.mat
+  uploadId: 950564

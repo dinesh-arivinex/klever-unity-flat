@@ -1,3 +1,10 @@
 fileFormatVersion: 2
 guid: 2c69a9969dee46a1869eb645a68a1820
 timeCreated: 1755435291
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269796
+  packageName: Multi-Platform Webview
+  packageVersion: 2.0.2
+  assetPath: Assets/NativeWebViewPlugin/Plugins/Android/NavitveBridge.cs
+  uploadId: 950564
