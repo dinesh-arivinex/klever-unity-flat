@@ -13,6 +13,7 @@ using SimpleJSON;
 using static UnityEngine.GraphicsBuffer;
 using System.Collections.Generic;
 using static ChangeClassRoom;
+using NativeWebView;
 
 public class AssetDownloader : MonoBehaviour
 {
@@ -110,7 +111,10 @@ public class AssetDownloader : MonoBehaviour
     }
     private void Perform()
     {
-        webManager.StartSimulation();
+        //webManager.StartSimulation();
+        GameManager.Instance.simulationManagerObj.SetActive(true);
+        WebViewController.Instance.StartSimulation();
+
       
     }
     public void AssignModelDetails(JSONArray modelData)

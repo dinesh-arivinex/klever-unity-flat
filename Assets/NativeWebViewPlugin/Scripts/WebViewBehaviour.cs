@@ -158,6 +158,11 @@ namespace NativeWebView
                 .BuildWebView();
         }
 
+        public void CloseWebView()
+        {
+            PluginWrapper.CloseWebView();
+        }
+
         [MonoPInvokeCallback(typeof(PluginWrapper.OnError))]
         private static void OnError(string error)
         {

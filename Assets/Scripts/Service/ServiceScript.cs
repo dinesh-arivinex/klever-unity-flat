@@ -1,6 +1,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using NativeWebView;
 using TriLibCore;
 using UnityEngine;
 using UnityEngine.Analytics;
@@ -191,6 +192,7 @@ public class ServiceScript : MonoBehaviour
         // StartMCQ();
         //webManager.StartSimulation();
         GameManager.Instance.simulationManagerObj.SetActive(true);
+        WebViewController.Instance.StartSimulation();
        // ThreesixtyVideoExperiance();
        //
 

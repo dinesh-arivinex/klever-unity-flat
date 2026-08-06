@@ -29,6 +29,11 @@ namespace NativeWebView
             platform.BuildWebView(json, onError, onSuccess);
         }
 
+        public static void CloseWebView()
+        {
+            platform.CloseWebView();
+        }
+
         internal static void CacheCallbacks(OnError onError, OnSuccess onSuccess)
         {
             pendingOnError = onError;

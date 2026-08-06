@@ -187,11 +187,6 @@ public class GamificationManager : MonoBehaviour
                     arrowGame.SetActive(true);
                     gamificationCollider.SetActive(true);
                     arrowGame.GetComponent<BasketBallQuiz>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
-                    if (rightcontroller1 != null && rightcontroller2 != null)
-                    {
-                        rightcontroller1.GetComponent<SkinnedMeshRenderer>().enabled = false;
-                        rightcontroller2.GetComponent<SkinnedMeshRenderer>().enabled = false;
-                    }
                     ballVisualize.SetActive(false);
                     arrowVisualize.SetActive(true);
                     arrowVisualize.GetComponent<MeshRenderer>().enabled = true;

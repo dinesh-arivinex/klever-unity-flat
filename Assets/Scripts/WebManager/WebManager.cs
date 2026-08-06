@@ -262,7 +262,7 @@ public class WebManager : MonoBehaviour
         }
 
         // After the countdown is complete, check the status
-        CheckTheStatus();
+        //CheckTheStatus();
     }
     public void CheckTheStatus()
 

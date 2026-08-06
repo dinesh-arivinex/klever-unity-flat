@@ -13,12 +13,13 @@ namespace NativeWebView
         public static WebViewController Instance { get; private set; }
 
         [Header("URL Settings")]
-        [SerializeField]public string _fallbackUrl;
+        public string _fallbackUrl = "https://example.com";
         public TextMeshProUGUI timer;
+        public string displayTimeStr;
         public UnityEvent startingevent;
         public UnityEvent endevent;
         private Coroutine timerCoroutine;
-        private float simulationTimer;
+        public float simulationTimer;
         public GameObject webViewChild;
         private GamificationManager gamificationManager;
         private ServiceScript service;
@@ -41,12 +42,6 @@ namespace NativeWebView
         {
             service = GameManager.Instance.serviceScript;
             gamificationManager = GameManager.Instance.gamificationManager;
-            if (webViewContainer != null)
-            {
-                CalculateAndSetPadding();
-            }
-            
-            BuildWebView();
         }
         public float ConvertTimeToSeconds(string displayTime)
         {
@@ -78,12 +73,39 @@ namespace NativeWebView
 
             return totalSeconds;
         }
-        public void AssignSimulation(string time)
+        public void AssignSimulation(string time, string url)
         {
+            _fallbackUrl = url;
             startingevent.Invoke();
             simulationTimer = ConvertTimeToSeconds(time);
-            StartCoroutine(WebViewDuration(simulationTimer));
+            
+            if (timerCoroutine != null) StopCoroutine(timerCoroutine);
+            timerCoroutine = StartCoroutine(WebViewDuration(simulationTimer));
+            
+            if (webViewContainer != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                CalculateAndSetPadding();
+            }
+            
+            if (this.gameObject.transform.childCount > 0)
+            {
+                this.gameObject.transform.GetChild(0).gameObject.SetActive(true);
+            }
+            
+            BuildWebView();
         }
+
+        public void StartSimulation()
+        {
+            if (string.IsNullOrEmpty(displayTimeStr) || string.IsNullOrEmpty(_fallbackUrl))
+            {
+                Debug.LogWarning("[WebViewController] Missing displayTimeStr or _fallbackUrl when starting simulation!");
+                return;
+            }
+            AssignSimulation(displayTimeStr, _fallbackUrl);
+        }
+
         private void CalculateAndSetPadding()
         {
             Vector3[] corners = new Vector3[4];
@@ -111,11 +133,12 @@ namespace NativeWebView
             WebViewBehaviour.Singleton.SetPadding(PaddingId.Top, top);
         }
 
-        private void BuildWebView()
+        public void BuildWebView()
         {
             WebViewBehaviour.Singleton.ToggleUrl(true);
             WebViewBehaviour.Singleton.SetUrl(_fallbackUrl);
             WebViewBehaviour.Singleton.BuildWebView();
+
         }
 
          IEnumerator WebViewDuration(float duration)
@@ -148,8 +171,14 @@ namespace NativeWebView
         if (timerCoroutine != null)
         {
             StopCoroutine(timerCoroutine);
+            timerCoroutine = null;
         }
-        // webView.SetActive(false );
+        
+        if (WebViewBehaviour.Singleton != null)
+        {
+            WebViewBehaviour.Singleton.CloseWebView();
+        }
+
         Destroy(webViewChild);
         service.AssignTaskBasedOnCondition(GameStatus.Mcq);
         gamificationManager.AssignGames();

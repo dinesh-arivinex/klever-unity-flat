@@ -753,5 +753,12 @@ mergeInto(LibraryManager.library, {
     }
 
     bridge.show(params);
+  },
+
+  NWV_CloseWebView: function() {
+    var bridge = window.__nativeWebViewBridge;
+    if (bridge) {
+      bridge.closeWebView("WebView closed from Unity");
+    }
   }
 });

@@ -242,6 +242,7 @@ public class API : MonoBehaviour
                         modelDetailsCount = modelDetails != null ? modelDetails.Count : 0;
                         VrManager.AddDownloadManager(modelDetailsCount);
                         List<string> allAnnotations = new List<string>();
+                        bool isPlayingSimulation = false;
                         JSONArray selectedSimulationDetails = null;
 
                          JSONArray simulationDetails = content["simulationDetails"].AsArray;
@@ -296,9 +297,17 @@ public class API : MonoBehaviour
  
                                  if (!string.IsNullOrEmpty(simulationURL))
                                  {
-                                     //webManager.AssignSimulationAsync(displayTime, simulationURL, simulationScript);
-                                     WebViewController.Instance.AssignSimulation(displayTime);
-                                     WebViewController.Instance._fallbackUrl = simulationURL;
+                                     if (WebViewController.Instance == null)
+                                     {
+                                         GameManager.Instance.simulationManagerObj.SetActive(true);
+                                     }
+
+                                     if (WebViewController.Instance != null)
+                                     {
+                                         WebViewController.Instance.displayTimeStr = displayTime;
+                                         WebViewController.Instance._fallbackUrl = simulationURL;
+                                     }
+                                     isPlayingSimulation = true;
                                      DebugUtil.Log("Simulation URL: " + simulationURL);
                                      DebugUtil.Log("Display Time: " + displayTime);
                                  }
@@ -419,7 +428,7 @@ public class API : MonoBehaviour
                         }
                         else
                         {
-                            if (!isPlayingVideo && !isModelDownload)
+                            if (!isPlayingVideo && !isModelDownload && !isPlayingSimulation)
                             {
                                 serviceScript.AssignTaskBasedOnCondition(GameStatus.SkipVideoAndModel);
                             }

@@ -8,6 +8,7 @@ namespace NativeWebView
     {
         void Initialize(string callbackTargetGameObjectName);
         void BuildWebView(string json, PluginWrapper.OnError onError, PluginWrapper.OnSuccess onSuccess);
+        void CloseWebView();
     }
 
     internal static class WebViewPlatformFactory
@@ -46,6 +47,11 @@ namespace NativeWebView
             androidJavaClass.CallStatic(NativeMethodName, json);
 #endif
         }
+
+        public void CloseWebView()
+        {
+            // Android implementation
+        }
     }
 
     internal sealed class IOSWebViewPlatform : IWebViewPlatform
@@ -66,6 +72,11 @@ namespace NativeWebView
             buildWebView(json, onError, onSuccess);
 #endif
         }
+
+        public void CloseWebView()
+        {
+            // iOS implementation
+        }
     }
 
     internal sealed class WebGLWebViewPlatform : IWebViewPlatform
@@ -76,6 +87,9 @@ namespace NativeWebView
 
         [DllImport("__Internal")]
         private static extern void NWV_ShowWebView(string json);
+        
+        [DllImport("__Internal")]
+        private static extern void NWV_CloseWebView();
 #endif
 
         private const string DefaultCallbackTarget = "NativeBridge";
@@ -103,6 +117,13 @@ namespace NativeWebView
             NWV_ShowWebView(json);
 #endif
         }
+
+        public void CloseWebView()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NWV_CloseWebView();
+#endif
+        }
     }
 
     internal sealed class UnsupportedWebViewPlatform : IWebViewPlatform
@@ -114,6 +135,10 @@ namespace NativeWebView
         public void BuildWebView(string json, PluginWrapper.OnError onError, PluginWrapper.OnSuccess onSuccess)
         {
             Debug.LogWarning("[PluginWrapper] Platform is not supported in this runtime. Use Android, iOS, or WebGL build.");
+        }
+
+        public void CloseWebView()
+        {
         }
     }
 }

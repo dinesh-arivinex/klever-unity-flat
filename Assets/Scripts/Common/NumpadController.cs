@@ -136,13 +136,12 @@ public class NumpadController : MonoBehaviour
         return null;
     }
 
-    private int lastClickFrame = -1;
+    private static float lastGlobalClickTime = 0f;
 
     public void OnNumberClicked(string number)
     {
-        // If this function was already called this exact frame, ignore it!
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
+        if (Time.unscaledTime - lastGlobalClickTime < 0.3f) return;
+        lastGlobalClickTime = Time.unscaledTime;
 
         currentText += number;
         UpdateDisplay();
@@ -150,8 +149,8 @@ public class NumpadController : MonoBehaviour
 
     public void OnBackspaceClicked()
     {
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
+        if (Time.unscaledTime - lastGlobalClickTime < 0.3f) return;
+        lastGlobalClickTime = Time.unscaledTime;
 
         if (currentText.Length > 0)
         {
@@ -162,8 +161,8 @@ public class NumpadController : MonoBehaviour
 
     public void OnEnterClicked()
     {
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
+        if (Time.unscaledTime - lastGlobalClickTime < 0.3f) return;
+        lastGlobalClickTime = Time.unscaledTime;
 
         onEnterPressed?.Invoke(currentText);
     }
@@ -215,7 +214,7 @@ public class NumpadButtonClickHandler : MonoBehaviour, IPointerClickHandler, IPo
         if (numpad == null) return;
 
         // Prevent accidental double-clicks within a fraction of a second
-        if (Time.time - lastClickTime < 0.1f) return; 
+        if (Time.time - lastClickTime < 0.3f) return; 
         lastClickTime = Time.time;
 
         if (isNumber) numpad.OnNumberClicked(numberValue);
