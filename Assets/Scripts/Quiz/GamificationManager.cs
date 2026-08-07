@@ -36,6 +36,8 @@ public class GamificationManager : MonoBehaviour
     public GameObject arrowGame;
     public GameObject basketballGame;
     public GameObject mcqGame;
+    public GameObject fillitGame;
+    public GameObject matchitGame;
     public GameObject gamificationCollider;
     private List<string> selectedGames = new List<string>(); // Array to store selected game names
     private int currentGameIndex = 0;
@@ -196,6 +198,78 @@ public class GamificationManager : MonoBehaviour
                     mcqGame.GetComponent<QuizManagers>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
                     mcqGame.SetActive(true);
                     break;
+                  case "FillIt":
+                  case "Fillit":
+                  case "Fill In The Blanks":
+                  case "FillInTheBlanks":
+                      SetRightHandMeshActive(true);
+                      if (fillitGame != null) 
+                      {
+                          var qm = fillitGame.GetComponent<QuizManagers>();
+                          if (qm != null)
+                          {
+                              List<string> groupedQuestions = new List<string>();
+                              List<List<AnswerData>> groupedOptions = new List<List<AnswerData>>();
+                              List<string> groupedImages = new List<string>();
+                              
+                              int advanceCount = 0;
+                              while (gameCount + advanceCount < typeOfGame.Count)
+                              {
+                                  string peekGame = typeOfGame[gameCount + advanceCount];
+                                  if (peekGame == "FillIt" || peekGame == "Fillit" || peekGame == "Fill In The Blanks" || peekGame == "FillInTheBlanks")
+                                  {
+                                      groupedQuestions.Add(questionlist[gameCount + advanceCount]);
+                                      groupedOptions.Add(allOptions[gameCount + advanceCount]);
+                                      groupedImages.Add(questionImageUrlList[gameCount + advanceCount]);
+                                      advanceCount++;
+                                  }
+                                  else break;
+                              }
+                              
+                              qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "FillIt");
+                              
+                              gameCount += (advanceCount - 1);
+                              currentGameIndex += (advanceCount - 1);
+                          }
+                          fillitGame.SetActive(true);
+                      }
+                      break;
+                  case "MatchIt":
+                  case "Matchit":
+                  case "Match The Following":
+                  case "MatchTheFollowing":
+                      SetRightHandMeshActive(true);
+                      if (matchitGame != null)
+                      {
+                          var qm = matchitGame.GetComponent<QuizManagers>();
+                          if (qm != null)
+                          {
+                              List<string> groupedQuestions = new List<string>();
+                              List<List<AnswerData>> groupedOptions = new List<List<AnswerData>>();
+                              List<string> groupedImages = new List<string>();
+                              
+                              int advanceCount = 0;
+                              while (gameCount + advanceCount < typeOfGame.Count)
+                              {
+                                  string peekGame = typeOfGame[gameCount + advanceCount];
+                                  if (peekGame == "MatchIt" || peekGame == "Matchit" || peekGame == "Match The Following" || peekGame == "MatchTheFollowing")
+                                  {
+                                      groupedQuestions.Add(questionlist[gameCount + advanceCount]);
+                                      groupedOptions.Add(allOptions[gameCount + advanceCount]);
+                                      groupedImages.Add(questionImageUrlList[gameCount + advanceCount]);
+                                      advanceCount++;
+                                  }
+                                  else break;
+                              }
+                              
+                              qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "MatchIt");
+                              
+                              gameCount += (advanceCount - 1);
+                              currentGameIndex += (advanceCount - 1);
+                          }
+                          matchitGame.SetActive(true);
+                      }
+                      break;
                 default:
                     DebugUtil.LogWarning("Unknown game name: " + currentGameName);
                     break;
@@ -310,6 +384,18 @@ public class GamificationManager : MonoBehaviour
                 break;
             case "MCQ":
                 mcqGame.SetActive(false);
+                break;
+            case "FillIt":
+            case "Fillit":
+            case "Fill In The Blanks":
+            case "FillInTheBlanks":
+                if (fillitGame != null) fillitGame.SetActive(false);
+                break;
+            case "MatchIt":
+            case "Matchit":
+            case "Match The Following":
+            case "MatchTheFollowing":
+                if (matchitGame != null) matchitGame.SetActive(false);
                 break;
             default:
                 DebugUtil.LogWarning("Unknown game name: " + currentGameName);

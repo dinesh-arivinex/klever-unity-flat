@@ -26,7 +26,26 @@ public class QuizManagers : MonoBehaviour
     // public List<InteractableUnityEventWrapper> interactableWrappers = new List<InteractableUnityEventWrapper>();
     public AudioSource audioSource;
 
+    public GameObject[] questionsFillIt, answersFillIt, answerPlacedTextFillIt;
+    public GameObject[] questionsMatchIt, answersMatchIt, answerPlacedTextMatchIt;
+    [HideInInspector]
+    public int answerPlacedCount;
+    [HideInInspector]
+    public int totQuestionFillItCount;
+    [HideInInspector]
+    public int totQuestionMatchItCount;
 
+    private bool hasDisplayedAllFillInTheBlanks = false;
+
+    public FillItReferenceManager fillItReferenceManager;
+    public MatchItReferenceManager matchItReferenceManager;
+
+
+    private Image targetImage;
+    private Color correctColor = new Color(Color.green.r, Color.green.g, Color.green.b, 95f / 255f);
+    private Color wrongColor = new Color(Color.red.r, Color.red.g, Color.red.b, 255f / 255f);
+
+    public ColliderTriggerMatch colliderTriggerMatch;
     [System.Serializable]
     private class Wrapper
     {
@@ -88,6 +107,30 @@ public class QuizManagers : MonoBehaviour
                 canvas.gameObject.AddComponent<GraphicRaycaster>();
             }
         }
+
+        // Auto-attach UIDraggable to FillIt and MatchIt answers for PC Drag/Drop
+        if (answersFillIt != null)
+        {
+            foreach (var answerObj in answersFillIt)
+            {
+                if (answerObj != null && answerObj.GetComponent<UIDraggable>() == null)
+                {
+                    answerObj.AddComponent<UIDraggable>();
+                }
+            }
+        }
+        if (answersMatchIt != null)
+        {
+            foreach (var answerObj in answersMatchIt)
+            {
+                if (answerObj != null && answerObj.GetComponent<UIDraggable>() == null)
+                {
+                    // For MatchIt, we want the root Answer parent to be dragged. 
+                    // Usually this is the Answer1Pos / Answer2Pos object itself.
+                    answerObj.AddComponent<UIDraggable>();
+                }
+            }
+        }
         // -------------------------------------
 
         gamificationManager=FindAnyObjectByType<GamificationManager>();
@@ -116,6 +159,26 @@ public class QuizManagers : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.H))
         {
             NextButtonClick();
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (UnityEngine.EventSystems.EventSystem.current != null)
+            {
+                var pointerEventData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
+                pointerEventData.position = Input.mousePosition;
+                var raycastResults = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
+                UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointerEventData, raycastResults);
+                
+                if (raycastResults.Count > 0)
+                {
+                    Debug.Log("UI Click Raycast Hit: " + raycastResults[0].gameObject.name);
+                }
+                else
+                {
+                    Debug.Log("UI Click Raycast Hit: NOTHING (Check if GraphicRaycaster is on Canvas)");
+                }
+            }
         }
     }
 
@@ -218,54 +281,357 @@ public class QuizManagers : MonoBehaviour
     public void DisplayQuestion(List<string> heading, List<AnswerData> answerOptions, string actualQuestion, string questionImageUrl)
     {
         answers = answerOptions;
-        questionText.text = actualQuestion;
+        if (questionText != null) questionText.text = actualQuestion;
         DisplayQuestionImage(questionImageUrl);
 
         if (questionText != null &&  currentQuestionIndex < 1)
         {
-            // MCQquestionText.text = $"MCQ{currentQuestionIndex + 1}";
-            MCQquestionText.text = heading[0];
-            // questionPanelText.text = $"Question{currentQuestionIndex + 1}";
-            questionPanelText.text = heading[1];
-            //questionText.text = $"{questions[currentQuestionIndex].question}";
-           
+            if (MCQquestionText != null && heading.Count > 0) MCQquestionText.text = heading[0];
+            if (questionPanelText != null && heading.Count > 1) questionPanelText.text = heading[1];
         }
 
-        for (int i = 0; i < answerButtons.Length; i++)
+        // Setup MCQ buttons if present
+        if (answerButtons != null && answerButtons.Length > 0)
         {
-            if (i < answerOptions.Count)
+            for (int i = 0; i < answerButtons.Length; i++)
             {
-                // var wrappers = answerButtons[i].GetComponents<InteractableUnityEventWrapper>();
-                // interactableWrappers.AddRange(wrappers);
-                if (answerButtons[i] != null)
+                if (i < answerOptions.Count)
                 {
-                    answerButtons[i].gameObject.SetActive(true);
-
-                    TextMeshProUGUI buttonText = answerButtons[i].GetComponentInChildren<TextMeshProUGUI>();
-                    if (buttonText != null)
+                    if (answerButtons[i] != null)
                     {
-                        buttonText.text = answerOptions[i].text;
+                        answerButtons[i].gameObject.SetActive(true);
+                        TextMeshProUGUI buttonText = answerButtons[i].GetComponentInChildren<TextMeshProUGUI>();
+                        if (buttonText != null) buttonText.text = answerOptions[i].text;
+                        SetOptionImage(answerButtons[i], answerOptions[i].imageUrl);
+                        answerButtons[i].onClick.RemoveAllListeners();
+                        int answerIndex = i;
+                        answerButtons[i].onClick.AddListener(() => OnAnswerClick(answerIndex));
+                    }
+                }
+                else if (answerButtons[i] != null)
+                {
+                    answerButtons[i].gameObject.SetActive(false);
+                }
+            }
+        }
+
+        // Setup FillIt options if present
+        GameObject[] fAnswers = (fillItReferenceManager != null && fillItReferenceManager.Answer != null && fillItReferenceManager.Answer.Length > 0 && fillItReferenceManager.Answer[0] != null) ? fillItReferenceManager.Answer : answersFillIt;
+        GameObject[] fQuestions = (fillItReferenceManager != null && fillItReferenceManager.Questions != null && fillItReferenceManager.Questions.Length > 0 && fillItReferenceManager.Questions[0] != null) ? fillItReferenceManager.Questions : questionsFillIt;
+        GameObject[] fPlacements = (fillItReferenceManager != null && fillItReferenceManager.AnswerPlacement != null && fillItReferenceManager.AnswerPlacement.Length > 0 && fillItReferenceManager.AnswerPlacement[0] != null) ? fillItReferenceManager.AnswerPlacement : answerPlacedTextFillIt;
+
+        if (fAnswers != null && fAnswers.Length > 0)
+        {
+            // Create a shuffled list of options to randomize their positions
+            List<AnswerData> shuffledOptions = new List<AnswerData>(answerOptions);
+            for (int i = 0; i < shuffledOptions.Count; i++)
+            {
+                int r = UnityEngine.Random.Range(i, shuffledOptions.Count);
+                AnswerData temp = shuffledOptions[i];
+                shuffledOptions[i] = shuffledOptions[r];
+                shuffledOptions[r] = temp;
+            }
+
+            for (int i = 0; i < fAnswers.Length; i++)
+            {
+                if (i < shuffledOptions.Count)
+                {
+                    if (fAnswers[i] != null)
+                    {
+                        fAnswers[i].SetActive(true);
+                        TextMeshProUGUI txt = fAnswers[i].GetComponentInChildren<TextMeshProUGUI>();
+                        if (txt != null) txt.text = shuffledOptions[i].text;
+                    }
+                    if (fQuestions != null && i < fQuestions.Length && fQuestions[i] != null)
+                    {
+                        fQuestions[i].SetActive(true);
+                        TextMeshProUGUI qTxt = fQuestions[i].GetComponentInChildren<TextMeshProUGUI>();
+                        if (qTxt != null) qTxt.text = actualQuestion;
+                    }
+                    if (fPlacements != null && i < fPlacements.Length && fPlacements[i] != null)
+                        fPlacements[i].SetActive(true);
+                }
+                else
+                {
+                    if (fAnswers[i] != null) fAnswers[i].SetActive(false);
+                    if (fQuestions != null && i < fQuestions.Length && fQuestions[i] != null) fQuestions[i].SetActive(false);
+                    if (fPlacements != null && i < fPlacements.Length && fPlacements[i] != null) fPlacements[i].SetActive(false);
+                }
+            }
+            totQuestionFillItCount = answerOptions.Count;
+        }
+
+        // Setup MatchIt options if present
+        GameObject[] mAnswers = (matchItReferenceManager != null && matchItReferenceManager.Answer != null && matchItReferenceManager.Answer.Length > 0 && matchItReferenceManager.Answer[0] != null) ? matchItReferenceManager.Answer : answersMatchIt;
+        GameObject[] mQuestions = (matchItReferenceManager != null && matchItReferenceManager.Questions != null && matchItReferenceManager.Questions.Length > 0 && matchItReferenceManager.Questions[0] != null) ? matchItReferenceManager.Questions : questionsMatchIt;
+        GameObject[] mPlacements = (matchItReferenceManager != null && matchItReferenceManager.AnsweTextStore != null && matchItReferenceManager.AnsweTextStore.Length > 0 && matchItReferenceManager.AnsweTextStore[0] != null) ? matchItReferenceManager.AnsweTextStore : answerPlacedTextMatchIt;
+
+        if (mAnswers != null && mAnswers.Length > 0)
+        {
+            // Create a shuffled list of options for MatchIt too!
+            List<AnswerData> shuffledOptions = new List<AnswerData>(answerOptions);
+            for (int i = 0; i < shuffledOptions.Count; i++)
+            {
+                int r = UnityEngine.Random.Range(i, shuffledOptions.Count);
+                AnswerData temp = shuffledOptions[i];
+                shuffledOptions[i] = shuffledOptions[r];
+                shuffledOptions[r] = temp;
+            }
+
+            for (int i = 0; i < mAnswers.Length; i++)
+            {
+                if (i < shuffledOptions.Count)
+                {
+                    if (mAnswers[i] != null)
+                    {
+                        mAnswers[i].SetActive(true);
+                        TextMeshProUGUI txt = mAnswers[i].GetComponentInChildren<TextMeshProUGUI>();
+                        if (txt != null) txt.text = shuffledOptions[i].text;
+                    }
+                    if (mQuestions != null && i < mQuestions.Length && mQuestions[i] != null)
+                    {
+                        mQuestions[i].SetActive(true);
+                        TextMeshProUGUI qTxt = mQuestions[i].GetComponentInChildren<TextMeshProUGUI>();
+                        if (qTxt != null) qTxt.text = actualQuestion; // In case MatchIt also needs this
+                    }
+                    if (mPlacements != null && i < mPlacements.Length && mPlacements[i] != null)
+                        mPlacements[i].SetActive(true);
+                }
+                else
+                {
+                    if (mAnswers[i] != null) mAnswers[i].SetActive(false);
+                    if (mQuestions != null && i < mQuestions.Length && mQuestions[i] != null) mQuestions[i].SetActive(false);
+                    if (mPlacements != null && i < mPlacements.Length && mPlacements[i] != null) mPlacements[i].SetActive(false);
+                }
+            }
+            totQuestionMatchItCount = answerOptions.Count;
+        }
+
+        buttonClicked = false;
+    }
+
+    public void DisplayMultipleQuestions(List<string> heading, List<List<AnswerData>> allAnswerOptions, List<string> actualQuestions, List<string> questionImageUrls, string gameName)
+    {
+        DisplayQuestionImage(questionImageUrls != null && questionImageUrls.Count > 0 ? questionImageUrls[0] : null);
+
+        if (MCQquestionText != null && heading.Count > 0) MCQquestionText.text = heading[0];
+        if (questionPanelText != null && heading.Count > 1) questionPanelText.text = heading[1];
+
+        if (gameName == "FillIt")
+        {
+            GameObject[] fAnswers = (fillItReferenceManager != null && fillItReferenceManager.Answer != null && fillItReferenceManager.Answer.Length > 0 && fillItReferenceManager.Answer[0] != null) ? fillItReferenceManager.Answer : answersFillIt;
+            GameObject[] fQuestions = (fillItReferenceManager != null && fillItReferenceManager.Questions != null && fillItReferenceManager.Questions.Length > 0 && fillItReferenceManager.Questions[0] != null) ? fillItReferenceManager.Questions : questionsFillIt;
+            GameObject[] fPlacements = (fillItReferenceManager != null && fillItReferenceManager.AnswerPlacement != null && fillItReferenceManager.AnswerPlacement.Length > 0 && fillItReferenceManager.AnswerPlacement[0] != null) ? fillItReferenceManager.AnswerPlacement : answerPlacedTextFillIt;
+
+            List<AnswerData> flatOptions = new List<AnswerData>();
+            foreach(var opts in allAnswerOptions) {
+                if (opts != null) flatOptions.AddRange(opts);
+            }
+
+            List<AnswerData> shuffledOptions = new List<AnswerData>(flatOptions);
+            for (int i = 0; i < shuffledOptions.Count; i++)
+            {
+                int r = UnityEngine.Random.Range(i, shuffledOptions.Count);
+                AnswerData temp = shuffledOptions[i];
+                shuffledOptions[i] = shuffledOptions[r];
+                shuffledOptions[r] = temp;
+            }
+
+            if (fAnswers != null && fAnswers.Length > 0)
+            {
+                for (int i = 0; i < fAnswers.Length; i++)
+                {
+                    if (i < shuffledOptions.Count)
+                    {
+                        if (fAnswers[i] != null)
+                        {
+                            fAnswers[i].SetActive(true);
+                            if (fAnswers[i].transform.parent != null)
+                            {
+                                fAnswers[i].transform.parent.SetAsLastSibling();
+                            }
+                            if (fAnswers[i].GetComponent<UIDraggable>() == null)
+                            {
+                                fAnswers[i].AddComponent<UIDraggable>();
+                            }
+                            CanvasGroup cg = fAnswers[i].GetComponent<CanvasGroup>();
+                            if (cg != null) cg.blocksRaycasts = true;
+                            
+                            UnityEngine.UI.Graphic[] graphics = fAnswers[i].GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
+                            foreach (var g in graphics) g.raycastTarget = true;
+
+                            TextMeshProUGUI txt = fAnswers[i].GetComponentInChildren<TextMeshProUGUI>();
+                            if (txt != null) txt.text = shuffledOptions[i].text;
+                        }
                     }
                     else
                     {
-                        DebugUtil.LogError("TextMeshProUGUI component not found on the button.");
+                        if (fAnswers[i] != null) fAnswers[i].SetActive(false);
                     }
-
-                    SetOptionImage(answerButtons[i], answerOptions[i].imageUrl);
-
-                    // Ensure we don't accumulate listeners when DisplayQuestion is called multiple times
-                    answerButtons[i].onClick.RemoveAllListeners();
-                    int answerIndex = i;
-                    answerButtons[i].onClick.AddListener(() => OnAnswerClick(answerIndex));
                 }
-                
             }
-            else if (answerButtons[i] != null)
+            
+            if (fQuestions != null)
             {
-                answerButtons[i].gameObject.SetActive(false);
+                int countToEnable = Mathf.Max(actualQuestions.Count, flatOptions.Count);
+                for(int i = 0; i < fQuestions.Length; i++)
+                {
+                    if (i < countToEnable)
+                    {
+                        if (fQuestions[i] != null)
+                        {
+                            if (fQuestions[i].transform.parent != null)
+                            {
+                                fQuestions[i].transform.parent.gameObject.SetActive(true);
+                            }
+                            fQuestions[i].SetActive(true);
+                            TextMeshProUGUI qTxt = fQuestions[i].GetComponentInChildren<TextMeshProUGUI>();
+                            if (qTxt != null) 
+                            {
+                                string textToAssign = i < actualQuestions.Count ? actualQuestions[i] : (actualQuestions.Count > 0 ? actualQuestions[0] : "");
+                                qTxt.text = textToAssign;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (fQuestions[i] != null) 
+                        {
+                            if (fQuestions[i].transform.parent != null)
+                            {
+                                fQuestions[i].transform.parent.gameObject.SetActive(false);
+                            }
+                            fQuestions[i].SetActive(false);
+                        }
+                    }
+                }
             }
+
+            if (fPlacements != null)
+            {
+                for(int i = 0; i < fPlacements.Length; i++)
+                {
+                    if (i < flatOptions.Count) 
+                    {
+                        if (fPlacements[i] != null) fPlacements[i].SetActive(true);
+                    }
+                    else
+                    {
+                        if (fPlacements[i] != null) fPlacements[i].SetActive(false);
+                    }
+                }
+            }
+            
+            totQuestionFillItCount = flatOptions.Count;
         }
-      
+        else if (gameName == "MatchIt")
+        {
+            GameObject[] mAnswers = (matchItReferenceManager != null && matchItReferenceManager.Answer != null && matchItReferenceManager.Answer.Length > 0 && matchItReferenceManager.Answer[0] != null) ? matchItReferenceManager.Answer : answersMatchIt;
+            GameObject[] mQuestions = (matchItReferenceManager != null && matchItReferenceManager.Questions != null && matchItReferenceManager.Questions.Length > 0 && matchItReferenceManager.Questions[0] != null) ? matchItReferenceManager.Questions : questionsMatchIt;
+            GameObject[] mPlacements = (matchItReferenceManager != null && matchItReferenceManager.AnsweTextStore != null && matchItReferenceManager.AnsweTextStore.Length > 0 && matchItReferenceManager.AnsweTextStore[0] != null) ? matchItReferenceManager.AnsweTextStore : answerPlacedTextMatchIt;
+
+            List<AnswerData> flatOptions = new List<AnswerData>();
+            foreach(var opts in allAnswerOptions) {
+                if (opts != null) flatOptions.AddRange(opts);
+            }
+
+            List<AnswerData> shuffledOptions = new List<AnswerData>(flatOptions);
+            for (int i = 0; i < shuffledOptions.Count; i++)
+            {
+                int r = UnityEngine.Random.Range(i, shuffledOptions.Count);
+                AnswerData temp = shuffledOptions[i];
+                shuffledOptions[i] = shuffledOptions[r];
+                shuffledOptions[r] = temp;
+            }
+
+            if (mAnswers != null)
+            {
+                for (int i = 0; i < mAnswers.Length; i++)
+                {
+                    if (i < shuffledOptions.Count)
+                    {
+                        if (mAnswers[i] != null)
+                        {
+                            mAnswers[i].SetActive(true);
+                            if (mAnswers[i].transform.parent != null)
+                            {
+                                mAnswers[i].transform.parent.SetAsLastSibling();
+                            }
+                            if (mAnswers[i].GetComponent<UIDraggable>() == null)
+                            {
+                                mAnswers[i].AddComponent<UIDraggable>();
+                            }
+                            CanvasGroup cg = mAnswers[i].GetComponent<CanvasGroup>();
+                            if (cg != null) cg.blocksRaycasts = true;
+                            
+                            UnityEngine.UI.Graphic[] graphics = mAnswers[i].GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
+                            foreach (var g in graphics) g.raycastTarget = true;
+
+                            TextMeshProUGUI txt = mAnswers[i].GetComponentInChildren<TextMeshProUGUI>();
+                            if (txt != null) txt.text = shuffledOptions[i].text;
+                        }
+                    }
+                    else
+                    {
+                        if (mAnswers[i] != null) mAnswers[i].SetActive(false);
+                    }
+                }
+            }
+
+            if (mQuestions != null)
+            {
+                int countToEnable = Mathf.Max(actualQuestions.Count, flatOptions.Count);
+                for(int i = 0; i < mQuestions.Length; i++)
+                {
+                    if (i < countToEnable)
+                    {
+                        if (mQuestions[i] != null)
+                        {
+                            if (mQuestions[i].transform.parent != null)
+                            {
+                                mQuestions[i].transform.parent.gameObject.SetActive(true);
+                            }
+                            mQuestions[i].SetActive(true);
+                            TextMeshProUGUI qTxt = mQuestions[i].GetComponentInChildren<TextMeshProUGUI>();
+                            if (qTxt != null) 
+                            {
+                                string textToAssign = i < actualQuestions.Count ? actualQuestions[i] : (actualQuestions.Count > 0 ? actualQuestions[0] : "");
+                                qTxt.text = textToAssign;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (mQuestions[i] != null) 
+                        {
+                            if (mQuestions[i].transform.parent != null)
+                            {
+                                mQuestions[i].transform.parent.gameObject.SetActive(false);
+                            }
+                            mQuestions[i].SetActive(false);
+                        }
+                    }
+                }
+            }
+
+            if (mPlacements != null)
+            {
+                for(int i = 0; i < mPlacements.Length; i++)
+                {
+                    if (i < flatOptions.Count)
+                    {
+                        if (mPlacements[i] != null) mPlacements[i].SetActive(true);
+                    }
+                    else
+                    {
+                        if (mPlacements[i] != null) mPlacements[i].SetActive(false);
+                    }
+                }
+            }
+            
+            totQuestionMatchItCount = flatOptions.Count;
+        }
+
         buttonClicked = false;
     }
 
@@ -368,5 +734,162 @@ public class QuizManagers : MonoBehaviour
     {
         EndEvent.Invoke();
        // SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+    private void DisableImagesInArray(GameObject[] arr)
+    {
+        if (arr == null) return;
+        foreach (var obj in arr)
+        {
+            if (obj == null) continue;
+            Transform img = obj.transform.Find("DynamicMatchItImage");
+            if (img != null) img.gameObject.SetActive(false);
+
+            if (obj.transform.parent != null)
+            {
+                img = obj.transform.parent.Find("DynamicMatchItImage");
+                if (img != null) img.gameObject.SetActive(false);
+            }
+        }
+    }
+    public void MatchSubmit()
+    {
+        if (matchItReferenceManager != null)
+        {
+            DisableImagesInArray(matchItReferenceManager.Questions);
+            DisableImagesInArray(matchItReferenceManager.Answer);
+        }
+
+        colliderTriggerMatch.Answer1HandGrab.gameObject.SetActive(false);
+        colliderTriggerMatch.Answer2HandGrab.gameObject.SetActive(false);
+        colliderTriggerMatch.Answer3HandGrab.gameObject.SetActive(false);
+        colliderTriggerMatch.Answer4HandGrab.gameObject.SetActive(false);
+
+        if (answersMatchIt[0].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[0].GetComponent<TextMeshProUGUI>().text)
+        {
+
+            targetImage = answersMatchIt[0].transform.parent.GetComponent<Image>();
+            ApplyColor(correctColor, targetImage);
+            gamificationManager.mcqScore++;
+        }
+        else
+        {
+            targetImage = answersMatchIt[0].transform.parent.GetComponent<Image>();
+            ApplyColor(wrongColor, targetImage);
+        }
+        if (answersMatchIt[1].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[1].GetComponent<TextMeshProUGUI>().text)
+        {
+            targetImage = answersMatchIt[1].transform.parent.GetComponent<Image>();
+            ApplyColor(correctColor, targetImage);
+            gamificationManager.mcqScore++;
+        }
+        else
+        {
+            targetImage = answersMatchIt[1].transform.parent.GetComponent<Image>();
+            ApplyColor(wrongColor, targetImage);
+        }
+        if (answersMatchIt[2].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[2].GetComponent<TextMeshProUGUI>().text)
+        {
+            targetImage = answersMatchIt[2].transform.parent.GetComponent<Image>();
+            ApplyColor(correctColor, targetImage);
+            gamificationManager.mcqScore++;
+        }
+        else
+        {
+            targetImage = answersMatchIt[2].transform.parent.GetComponent<Image>();
+            ApplyColor(wrongColor, targetImage);
+        }
+        if (answersMatchIt[3].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[3].GetComponent<TextMeshProUGUI>().text)
+        {
+            targetImage = answersMatchIt[3].transform.parent.GetComponent<Image>();
+            ApplyColor(correctColor, targetImage);
+            gamificationManager.mcqScore++;
+        }
+        else
+        {
+            targetImage = answersMatchIt[3].transform.parent.GetComponent<Image>();
+            ApplyColor(wrongColor, targetImage);
+        }
+
+        StartCoroutine(NextEnable());
+    }
+
+    private int FindMatchItAnswerIndex(GameObject obj)
+    {
+        if (answersMatchIt == null) return -1;
+        for (int i = 0; i < answersMatchIt.Length; i++)
+        {
+            if (answersMatchIt[i] == null) continue;
+            // Check if answersMatchIt[i] is the exact object or any child within the obj's hierarchy
+            if (answersMatchIt[i] == obj || answersMatchIt[i].transform.IsChildOf(obj.transform))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void SwapMatchItAnswers(GameObject objA, GameObject objB)
+    {
+        if (answersMatchIt == null) return;
+
+        int indexA = FindMatchItAnswerIndex(objA);
+        int indexB = FindMatchItAnswerIndex(objB);
+
+        if (indexA != -1 && indexB != -1)
+        {
+            // 1. Swap GameObject array order (sibling index)
+            int siblingIndexA = objA.transform.GetSiblingIndex();
+            int siblingIndexB = objB.transform.GetSiblingIndex();
+
+            if (siblingIndexA < siblingIndexB)
+            {
+                objB.transform.SetSiblingIndex(siblingIndexA);
+                objA.transform.SetSiblingIndex(siblingIndexB);
+            }
+            else if (siblingIndexB < siblingIndexA)
+            {
+                objA.transform.SetSiblingIndex(siblingIndexB);
+                objB.transform.SetSiblingIndex(siblingIndexA);
+            }
+
+            // 2. Swap array elements
+            GameObject temp = answersMatchIt[indexA];
+            answersMatchIt[indexA] = answersMatchIt[indexB];
+            answersMatchIt[indexB] = temp;
+
+            DebugUtil.Log($"Swapped array elements at indices {indexA} and {indexB}");
+        }
+        else
+        {
+            DebugUtil.Log($"SwapMatchItAnswers failed to find objects in array: indexA={indexA}, indexB={indexB}");
+        }
+    }
+
+    public void MoveMatchItAnswerToSlot(GameObject snappedObject, int newSlotIndex)
+    {
+        if (answersMatchIt == null || newSlotIndex < 0 || newSlotIndex >= answersMatchIt.Length) return;
+
+        int currentIndex = System.Array.IndexOf(answersMatchIt, snappedObject);
+        if (currentIndex != -1 && currentIndex != newSlotIndex)
+        {
+            // Swap with whatever is currently in the new slot
+            GameObject objectInNewSlot = answersMatchIt[newSlotIndex];
+            SwapMatchItAnswers(snappedObject, objectInNewSlot);
+        }
+    }
+
+    public IEnumerator NextEnable()
+    {
+        yield return new WaitForSeconds(2f);
+        nextButton.gameObject.SetActive(true);
+        nextButton.enabled = true;
+        nextButton.gameObject.GetComponent<BoxCollider>().enabled = true;
+    }
+    private void ApplyColor(Color color, Image Image)
+    {
+        if (targetImage != null)
+        {
+            targetImage.color = color;
+        }
     }
 }
