@@ -13,6 +13,26 @@ namespace WebGLMigration
         private float rotationX = 0f;
         private float rotationY = 0f;
 
+        public static WebCameraController Instance;
+
+        private void Awake()
+        {
+            Instance = this;
+        }
+
+        public void EnableController(bool state)
+        {
+            enabled = state;
+            isDragging = false;
+        }
+
+        public void ResetCameraRotation()
+        {
+            rotationX = 0f;
+            rotationY = 0f;
+            transform.localRotation = Quaternion.identity;
+        }
+
         private Vector3 lastMousePosition;
         private bool isDragging = false;
 

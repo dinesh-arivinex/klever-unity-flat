@@ -79,6 +79,11 @@ public class AssetDownloader : MonoBehaviour
     {
         if(api.IsmodelDownload())
         {
+            if (WebGLMigration.WebCameraController.Instance != null)
+            {
+                WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
+                WebGLMigration.WebCameraController.Instance.EnableController(false);
+            }
             //ChangeModelPosition();
             ChangeSkyBox.SetSkybox(ChangeSkyBox.skyBoxMaterialNew[ChangeClassRoom.Instance.classRoom]);
             DynamicGI.UpdateEnvironment();

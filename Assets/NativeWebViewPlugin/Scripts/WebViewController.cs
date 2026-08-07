@@ -98,6 +98,11 @@ namespace NativeWebView
 
         public void StartSimulation()
         {
+            if (WebGLMigration.WebCameraController.Instance != null)
+            {
+                WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
+                WebGLMigration.WebCameraController.Instance.EnableController(false);
+            }
             if (string.IsNullOrEmpty(displayTimeStr) || string.IsNullOrEmpty(_fallbackUrl))
             {
                 Debug.LogWarning("[WebViewController] Missing displayTimeStr or _fallbackUrl when starting simulation!");

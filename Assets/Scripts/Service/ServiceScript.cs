@@ -222,7 +222,11 @@ public class ServiceScript : MonoBehaviour
     }
     public void StartMCQ()
     {
-       
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
+            WebGLMigration.WebCameraController.Instance.EnableController(false);
+        }
         MCQ.Invoke();
     }
 

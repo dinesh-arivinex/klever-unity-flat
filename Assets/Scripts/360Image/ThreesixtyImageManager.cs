@@ -38,7 +38,6 @@ public class ThreesixtyImageManager : MonoBehaviour
 
     public void ThreeSixtyExperianceStarted()
     {
-      
         if (!api.is360Image)
         {
             // gamificationManager.AssignGames();
@@ -48,7 +47,11 @@ public class ThreesixtyImageManager : MonoBehaviour
         }
         else
         {
-
+            if (WebGLMigration.WebCameraController.Instance != null)
+            {
+                WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
+                WebGLMigration.WebCameraController.Instance.EnableController(true);
+            }
             startingEvent.Invoke();
             addingImage.AssignSkyBox();
             ElementToDisable();

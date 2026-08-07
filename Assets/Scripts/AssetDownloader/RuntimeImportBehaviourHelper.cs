@@ -5,7 +5,7 @@ using UnityEngine;
 using SocketIOClient.Transport;
 // using Oculus.Interaction;
 // using Oculus.Interaction.HandGrab;
-using UnityEngine.XR.Interaction.Toolkit;
+
 
 public class RuntimeImportBehaviourHelper : MonoBehaviour
 {
@@ -25,6 +25,11 @@ public class RuntimeImportBehaviourHelper : MonoBehaviour
     }
     public void FindingModel()
     {
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.EnableController(false);
+        }
+        
         googleTextToSpeech = FindObjectOfType<GoogleTextToSpeech>();
         model = GameObject.FindWithTag(runtimeImportBehaviour.tagName);
 
@@ -55,11 +60,23 @@ public class RuntimeImportBehaviourHelper : MonoBehaviour
             //firstChild.transform.SetParent(grabObj.transform,false);
             if (boxCollider == null)
             {
-
             }
             else
             {
                 DebugUtil.LogWarning("The child already has a BoxCollider.");
+            }
+
+            // [NEW] Strip VR Components to allow clean mouse interactions
+            UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable grabInteractable = grabObj.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            if (grabInteractable != null) Destroy(grabInteractable);
+            
+            Rigidbody rb = grabObj.GetComponent<Rigidbody>();
+            if (rb != null) Destroy(rb);
+            
+            // [NEW] Attach normal WebGL/PC Mouse Interaction
+            if (grabObj.GetComponent<MouseModelInteraction>() == null)
+            {
+                grabObj.AddComponent<MouseModelInteraction>();
             }
         }
         else

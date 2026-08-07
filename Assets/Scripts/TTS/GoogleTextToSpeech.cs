@@ -86,6 +86,10 @@ public class GoogleTextToSpeech : MonoBehaviour
     }
     public void StartTalking(string text)
     {
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
+        }
         // textToSynthesize = text;
         //  StartCoroutine(SendTextToSpeechRequest());
         // LanguageSelector();

@@ -96,6 +96,12 @@ public class VideoManager : MonoBehaviour
     // Main play function
     public void PlayVideo()
     {
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
+            WebGLMigration.WebCameraController.Instance.EnableController(true);
+        }
+        
         videoPlayerURL = PlayerPrefs.GetString(StaticStrings.videoUrl);
 
         if (!string.IsNullOrEmpty(youtubeURL))
