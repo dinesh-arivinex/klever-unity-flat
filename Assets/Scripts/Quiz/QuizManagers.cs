@@ -57,8 +57,39 @@ public class QuizManagers : MonoBehaviour
     //public MeshRenderer[] meshRender;
     public List<Option> options;
     private List<AnswerData> answers = new List<AnswerData>();
+    private bool isProcessingNext = false;
+
+    private IEnumerator ResetProcessingNext()
+    {
+        yield return new WaitForEndOfFrame();
+        isProcessingNext = false;
+    }
+
     private void OnEnable()
     {
+        StartCoroutine(ResetProcessingNext());
+        // --- ADDED FOR PC/WEBGL UI SUPPORT ---
+        if (UnityEngine.EventSystems.EventSystem.current == null)
+        {
+            GameObject esObj = new GameObject("EventSystem");
+            esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+        
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            if (canvas.worldCamera == null && canvas.renderMode == RenderMode.WorldSpace)
+            {
+                canvas.worldCamera = Camera.main;
+            }
+            if (canvas.GetComponent<GraphicRaycaster>() == null)
+            {
+                canvas.gameObject.AddComponent<GraphicRaycaster>();
+            }
+        }
+        // -------------------------------------
+
         gamificationManager=FindAnyObjectByType<GamificationManager>();
         apiManager =FindAnyObjectByType<API>(); 
          Wrapper wrapper = JsonUtility.FromJson<Wrapper>("{\"questions\":" + apiManager.assessmentsString + "}");
@@ -67,7 +98,11 @@ public class QuizManagers : MonoBehaviour
      //   DisplayQuestion();
         StartEvent.Invoke();
         nextButton.enabled = false;
-        nextButton.gameObject.GetComponent<BoxCollider>().enabled = false;
+        
+        // Ensure listener is added only once by removing all previous listeners
+        nextButton.onClick.RemoveAllListeners();
+        nextButton.onClick.AddListener(NextButtonClick);
+        
         Invoke("DeleteElement", 4f);
         //foreach (var element in meshRender) 
         //{
@@ -218,9 +253,10 @@ public class QuizManagers : MonoBehaviour
 
                     SetOptionImage(answerButtons[i], answerOptions[i].imageUrl);
 
+                    // Ensure we don't accumulate listeners when DisplayQuestion is called multiple times
+                    answerButtons[i].onClick.RemoveAllListeners();
                     int answerIndex = i;
                     answerButtons[i].onClick.AddListener(() => OnAnswerClick(answerIndex));
-                    // interactableWrappers[i].WhenSelect.AddListener(() => OnAnswerClick(answerIndex));
                 }
                 
             }
@@ -256,7 +292,6 @@ public class QuizManagers : MonoBehaviour
             audioSource.Play();
         }
         nextButton.enabled = true;
-        nextButton.gameObject.GetComponent<BoxCollider>().enabled = true;
     }
 
     public void ToggleButtonActivation(bool activated)
@@ -269,8 +304,10 @@ public class QuizManagers : MonoBehaviour
 
     private void NextButtonClick()
     {
+        if (isProcessingNext) return;
+        isProcessingNext = true;
+        
         nextButton.enabled = false;
-        nextButton.gameObject.GetComponent<BoxCollider>().enabled = false;
         for (int i = 0; i < answerButtons.Length; i++)
         {
             Color newColor = new Color(150f / 255f, 150f / 255f, 150f / 255f, 255f / 255f);
@@ -289,8 +326,6 @@ public class QuizManagers : MonoBehaviour
             reloadSceneEvent.Invoke();
             DebugUtil.Log("Your score is"+MCQstudetScore);
             gamificationManager.OnGameCompleted();
-
-
         }
     }
 

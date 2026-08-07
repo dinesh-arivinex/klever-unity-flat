@@ -55,8 +55,17 @@ public class BasketBallQuiz : MonoBehaviour
     public GameObject arrow;
     private GamificationManager gamificationManager;
     private List<AnswerData> answers=new List<AnswerData>();
+    private bool isProcessingNext = false;
+
+    private IEnumerator ResetProcessingNext()
+    {
+        yield return new WaitForEndOfFrame();
+        isProcessingNext = false;
+    }
+
     private void OnEnable()
     {
+        StartCoroutine(ResetProcessingNext());
         gamificationManager = FindAnyObjectByType<GamificationManager>();
         BallSpawner.isGamefication=true;
         apiManager = FindAnyObjectByType<API>();
@@ -215,11 +224,10 @@ public class BasketBallQuiz : MonoBehaviour
 
                     SetOptionImage(answerButtons[i], answerOptions[i].imageUrl);
 
+                    // Ensure we don't accumulate listeners when DisplayQuestion is called multiple times
+                    answerButtons[i].onClick.RemoveAllListeners();
                     int answerIndex = i;
                     answerButtons[i].onClick.AddListener(() => OnAnswerClick(answerIndex));
-
-                    // interactableWrappers[i].WhenSelect.AddListener(() => OnAnswerClick(answerIndex));
-
                 }
                 else
                 {
@@ -278,6 +286,8 @@ public class BasketBallQuiz : MonoBehaviour
 
     public void NextButtonClick()
     {
+        if (isProcessingNext) return;
+        isProcessingNext = true;
         
         nextButton.enabled = false;
         nextButton.gameObject.GetComponent<BoxCollider>().enabled = false;

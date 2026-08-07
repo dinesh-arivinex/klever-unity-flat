@@ -105,7 +105,8 @@ namespace NativeWebView
             }
             if (string.IsNullOrEmpty(displayTimeStr) || string.IsNullOrEmpty(_fallbackUrl))
             {
-                Debug.LogWarning("[WebViewController] Missing displayTimeStr or _fallbackUrl when starting simulation!");
+                Debug.LogWarning("[WebViewController] Missing displayTimeStr or _fallbackUrl when starting simulation! Skipping to MCQ.");
+                CheckTheStatus();
                 return;
             }
             AssignSimulation(displayTimeStr, _fallbackUrl);

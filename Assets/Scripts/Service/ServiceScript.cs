@@ -187,17 +187,9 @@ public class ServiceScript : MonoBehaviour
     }
     public void SkipModelDownload()
     {
-       
-        WithoutSkippingModel.Invoke();
-        // StartMCQ();
-        //webManager.StartSimulation();
+        // Removed WithoutSkippingModel.Invoke() because this is the SKIP model phase!
         GameManager.Instance.simulationManagerObj.SetActive(true);
         WebViewController.Instance.StartSimulation();
-       // ThreesixtyVideoExperiance();
-       //
-
-
-
     }
     public void SkipVideoAndModel()
     {
@@ -227,6 +219,7 @@ public class ServiceScript : MonoBehaviour
             WebGLMigration.WebCameraController.Instance.ResetCameraRotation();
             WebGLMigration.WebCameraController.Instance.EnableController(false);
         }
+        GameManager.Instance.EnableClassAndBoard.Invoke();
         MCQ.Invoke();
     }
 

@@ -77,18 +77,13 @@ public class GamificationManager : MonoBehaviour
     List<string[]> options = new List<string[]>();
     List<string> questionlist = new List<string>();
     public string currentGameName;
-    public GameObject arrowVisualize, arrowVisualizeHandMode;
-    public GameObject ballVisualize, ballVisualizeHandMode;
-    public  int arrowScore;
-    public  int basketBallScore;
-    public  int mcqScore;
+    public int arrowScore;
+    public int basketBallScore;
+    public int mcqScore;
 
     public GameObject[] disableObjects;
     public GameObject classRoom;
     public GameObject welcomeSessionScene;
-
-    public GameObject rightcontroller1, rightcontroller2;
-    public GameObject crossbow, crossbowHandMode;
 
     private GoogleTextToSpeech googleTextToSpeech;
 
@@ -114,7 +109,7 @@ public class GamificationManager : MonoBehaviour
         {
             CallingThankyouOutSide();
            thankyouCanvas.SetActive(true);
-           GameManager.Instance.AssessmentParent.SetActive(false);
+           // GameManager.Instance.AssessmentParent.SetActive(false); // Removed to prevent hiding thankyouCanvas
         }
         else
         {
@@ -187,37 +182,16 @@ public class GamificationManager : MonoBehaviour
                     arrowGame.SetActive(true);
                     gamificationCollider.SetActive(true);
                     arrowGame.GetComponent<BasketBallQuiz>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
-                    ballVisualize.SetActive(false);
-                    arrowVisualize.SetActive(true);
-                    arrowVisualize.GetComponent<MeshRenderer>().enabled = true;
-                    crossbow.SetActive(true);
-                    ballVisualizeHandMode.SetActive(false);
-                    arrowVisualizeHandMode.SetActive(true);
-                    arrowVisualizeHandMode.GetComponent<MeshRenderer>().enabled = true;
-                    crossbowHandMode.SetActive(true); 
                     SetRightHandMeshActive(false);
                     break;
                 case "Basketball":
                    //  basketBallScore++;
                     basketballGame.SetActive(true);
-                    if(rightcontroller1 != null && rightcontroller2!=null)
-                    {
-                        rightcontroller1.GetComponent<SkinnedMeshRenderer>().enabled = false;
-                        rightcontroller2.GetComponent<SkinnedMeshRenderer>().enabled = false;
-                    }
-                    crossbow.SetActive(false);
-                    crossbowHandMode.SetActive(false);
-                    ballVisualize.SetActive(true);
-                    ballVisualizeHandMode.SetActive(true);
                     SetRightHandMeshActive(false);
                     gamificationCollider.SetActive(true);
                     basketballGame.GetComponent<BasketBallQuiz>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
                     break;
                 case "MCQ":
-                    crossbow.SetActive(false);
-                    crossbowHandMode.SetActive(false);
-                    ballVisualize.SetActive(false);
-                    ballVisualizeHandMode.SetActive(false);
                     SetRightHandMeshActive(true);
                     mcqGame.GetComponent<QuizManagers>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
                     mcqGame.SetActive(true);
@@ -237,19 +211,11 @@ public class GamificationManager : MonoBehaviour
      
     IEnumerator EnableThankYouCanvas(string experienceId, string schoolId, string sectionID, string gradeID)
     {
-        if (rightcontroller1 != null && rightcontroller2 != null)
-        {
-            rightcontroller2.SetActive(true);
-            rightcontroller1.SetActive(true);
-            rightcontroller2.GetComponent<SkinnedMeshRenderer>().enabled = true;
-            rightcontroller1.GetComponent<SkinnedMeshRenderer>().enabled = true;
-        }
-            
         SetRightHandMeshActive(true);
         SetVrRaycastsActive(false);
         DeviceSynHandler.isGameOver = true;
         thankyouCanvas.SetActive(true);
-        GameManager.Instance.AssessmentParent.SetActive(false);
+        // GameManager.Instance.AssessmentParent.SetActive(false); // Removed to prevent hiding thankyouCanvas
         StudentScore student = new StudentScore()
         {
             studentID = Klass.Net.KlassDeviceIdentity.Value,//deviceid

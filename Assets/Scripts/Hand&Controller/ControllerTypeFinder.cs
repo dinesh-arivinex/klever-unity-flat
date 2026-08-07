@@ -28,12 +28,12 @@ public class ControllerTypeFinder : MonoBehaviour
                     ControllerSwitchQuest.Instance.AssignGamification();
                 }
                 Transform getChildObj = this.gameObject.transform.GetChild(0);
-                if (gamificationManager != null) gamificationManager.rightcontroller2 = getChildObj.gameObject;
+                // if (gamificationManager != null) gamificationManager.rightcontroller2 = getChildObj.gameObject;
             }
             else
             {
                 Transform getChildObj = this.gameObject.transform.GetChild(0);
-                if (gamificationManager != null) gamificationManager.rightcontroller1 = getChildObj.gameObject;
+                // if (gamificationManager != null) gamificationManager.rightcontroller1 = getChildObj.gameObject;
             }
         }
         else
