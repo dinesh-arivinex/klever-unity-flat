@@ -90,7 +90,7 @@ namespace NativeWebView
             
             if (this.gameObject.transform.childCount > 0)
             {
-                this.gameObject.transform.GetChild(0).gameObject.SetActive(true);
+                this.gameObject.transform.GetChild(1).gameObject.SetActive(true);
             }
             
             BuildWebView();
