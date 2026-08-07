@@ -1,0 +1,92 @@
+name: Deploy Unity WebGL to S3 & CloudFront
+
+on:
+  push:
+    branches:
+      - '2D'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy WebGL Build to S3 & Invalidate CloudFront
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Check for WebGL Build Directory
+        id: check_build
+        run: |
+          if [ -f "index.html" ] && [ -d "Build" ]; then
+            echo "build_dir=." >> $GITHUB_OUTPUT
+            echo "has_build=true" >> $GITHUB_OUTPUT
+          elif [ -d "TestWebview1/TestWebview1" ]; then
+            echo "build_dir=TestWebview1/TestWebview1" >> $GITHUB_OUTPUT
+            echo "has_build=true" >> $GITHUB_OUTPUT
+          elif [ -d "TestWebview1" ] && [ -f "TestWebview1/index.html" ]; then
+            echo "build_dir=TestWebview1" >> $GITHUB_OUTPUT
+            echo "has_build=true" >> $GITHUB_OUTPUT
+          elif [ -d "Build" ]; then
+            echo "build_dir=." >> $GITHUB_OUTPUT
+            echo "has_build=true" >> $GITHUB_OUTPUT
+          elif [ -d "webgl" ]; then
+            echo "build_dir=webgl" >> $GITHUB_OUTPUT
+            echo "has_build=true" >> $GITHUB_OUTPUT
+          elif [ -d "build/WebGL/WebGL" ]; then
+            echo "build_dir=build/WebGL/WebGL" >> $GITHUB_OUTPUT
+            echo "has_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_build=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Unity WebGL (GameCI)
+        if: steps.check_build.outputs.has_build == 'false' && secrets.UNITY_LICENSE != ''
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          buildName: WebGL
+
+      - name: Determine final build directory
+        id: final_dir
+        run: |
+          if [ "${{ steps.check_build.outputs.has_build }}" = "true" ]; then
+            echo "dir=${{ steps.check_build.outputs.build_dir }}" >> $GITHUB_OUTPUT
+          else
+            echo "dir=build/WebGL/WebGL" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync WebGL build to S3
+        run: |
+          BUILD_DIR="${{ steps.final_dir.outputs.dir }}"
+          echo "Deploying from directory: ${BUILD_DIR}"
+          aws s3 sync "${BUILD_DIR}" s3://webview-klever-edu-868542477648 --delete
+
+      - name: Set correct Content-Type for WebGL assets
+        run: |
+          aws s3 cp s3://webview-klever-edu-868542477648/Build/ s3://webview-klever-edu-868542477648/Build/ \
+            --recursive --exclude "*" --include "*.wasm" \
+            --content-type "application/wasm" --metadata-directive REPLACE || true
+
+          aws s3 cp s3://webview-klever-edu-868542477648/Build/ s3://webview-klever-edu-868542477648/Build/ \
+            --recursive --exclude "*" --include "*.data" \
+            --content-type "application/octet-stream" --metadata-directive REPLACE || true
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E1BGL6363KPZ37 \
+            --paths "/*"
