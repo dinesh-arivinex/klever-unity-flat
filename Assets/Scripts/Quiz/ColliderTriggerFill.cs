@@ -47,7 +47,7 @@ public class ColliderTriggerFill : MonoBehaviour, IDropHandler
         UIDraggable draggable = draggedObj.GetComponent<UIDraggable>();
         if (draggable != null) draggable.isDroppedSuccessfully = true;
 
-        GameObject grandParent = answer.transform.parent.parent.gameObject;
+        GameObject grandParent = answer.transform.gameObject;
 
         Debug.Log(textfromRes.text);
         Debug.Log(answer.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text);
@@ -57,12 +57,13 @@ public class ColliderTriggerFill : MonoBehaviour, IDropHandler
 
         if (this.GetComponent<BoxCollider>() != null) this.GetComponent<BoxCollider>().enabled = false;
         if (this.gameObject.GetComponent<Image>() != null) this.gameObject.GetComponent<Image>().enabled = false;
-        if (answer.GetComponent<BoxCollider>() != null) answer.GetComponent<BoxCollider>().enabled = false;
-        
-        if (grandParent.transform.childCount > 1) 
-        {
-            grandParent.transform.GetChild(1).gameObject.SetActive(false);
-        }
+        if (answer.GetComponent<UIDraggable>() != null) answer.GetComponent<UIDraggable>().enabled = false;
+        if (answer.GetComponent<Button>() != null) answer.GetComponent<Button>().enabled = false;
+
+        //if (grandParent.transform.childCount > 1) 
+        //{
+        //    grandParent.transform.GetChild(1).gameObject.SetActive(false);
+        //}
 
         if (childText.text == textfromRes.text)
         {
