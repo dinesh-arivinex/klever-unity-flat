@@ -1,3 +1,4 @@
+// LATEST UPDATE: MOCK CONTROL AND DETAILED LOGGING PIPELINE ACTIVE
 using SimpleJSON;
 using System;
 using System.Collections;
@@ -94,10 +95,10 @@ public class DeviceSynHandler : MonoBehaviour
     {
         if (KlassMqttClient.Instance != null)
         {
-            KlassMqttClient.Instance.OnConnected      -= HandleMqttConnected;
-            KlassMqttClient.Instance.OnDisconnected   -= HandleMqttDisconnected;
+            KlassMqttClient.Instance.OnConnected -= HandleMqttConnected;
+            KlassMqttClient.Instance.OnDisconnected -= HandleMqttDisconnected;
             KlassMqttClient.Instance.OnSessionControl -= HandleSessionControl;
-            KlassMqttClient.Instance.OnCommand        -= HandleCommand;
+            KlassMqttClient.Instance.OnCommand -= HandleCommand;
         }
     }
 
@@ -109,6 +110,30 @@ public class DeviceSynHandler : MonoBehaviour
             _heartbeatTimer = 0f;
             PublishStateIfChanged(force: true);
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            UnityEngine.Debug.Log("[DeviceSynHandler] Simulated manual Start command via keyboard 'S'.");
+            var mockPayload = new JSONObject();
+            mockPayload["isStart"] = true;
+            mockPayload["isStop"] = false;
+            mockPayload["experienceId"] = "simulated_id";
+            mockPayload["schoolId"] = "simulated_school";
+            mockPayload["sectionId"] = "simulated_section";
+            mockPayload["gradeId"] = "simulated_grade";
+            HandleSessionControl(mockPayload);
+        }
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            UnityEngine.Debug.Log("[DeviceSynHandler] Simulated manual Stop command via keyboard 'X'.");
+            var mockPayload = new JSONObject();
+            mockPayload["isStart"] = false;
+            mockPayload["isStop"] = true;
+            mockPayload["experienceId"] = "simulated_id";
+            HandleSessionControl(mockPayload);
+        }
+#endif
     }
 
     private void BootMqtt()
@@ -121,10 +146,10 @@ public class DeviceSynHandler : MonoBehaviour
             go.AddComponent<KlassMqttClient>();
         }
         var c = KlassMqttClient.Instance;
-        c.OnConnected      += HandleMqttConnected;
-        c.OnDisconnected   += HandleMqttDisconnected;
+        c.OnConnected += HandleMqttConnected;
+        c.OnDisconnected += HandleMqttDisconnected;
         c.OnSessionControl += HandleSessionControl;
-        c.OnCommand        += HandleCommand;
+        c.OnCommand += HandleCommand;
         c.Begin();
     }
 
@@ -136,25 +161,31 @@ public class DeviceSynHandler : MonoBehaviour
 
     private void HandleMqttDisconnected()
     {
+        UnityEngine.Debug.Log("[DeviceSynHandler] MQTT Disconnected.");
         isActiveDevice = false;
     }
 
     private void HandleSessionControl(JSONNode payload)
     {
+        UnityEngine.Debug.Log($"[DeviceSynHandler] HandleSessionControl called with payload: {payload.ToString()}");
         if (payload == null || payload.Count == 0)
         {
+            UnityEngine.Debug.LogWarning("[DeviceSynHandler] HandleSessionControl: Payload empty/null. Reloading scene...");
             if (!isLobby) LoadScene();
             return;
         }
         bool isStart = payload["isStart"].AsBool;
-        bool isStop  = payload["isStop"].AsBool;
+        bool isStop = payload["isStop"].AsBool;
+
+        UnityEngine.Debug.Log($"[DeviceSynHandler] Session Control Status: isStart={isStart}, isStop={isStop}, isOpenGame={isOpenGame}");
 
         if (isFirstTime && !string.IsNullOrEmpty(payload["gradeId"]))
         {
             string experianceID = payload["experienceId"];
-            string schoolId     = payload["schoolId"];
-            string sectionId    = payload["sectionId"];
-            string gradeId      = payload["gradeId"];
+            string schoolId = payload["schoolId"];
+            string sectionId = payload["sectionId"];
+            string gradeId = payload["gradeId"];
+            UnityEngine.Debug.Log($"[DeviceSynHandler] Initializing Student Performance references with ExperienceID={experianceID}, SchoolID={schoolId}, SectionID={sectionId}, GradeID={gradeId}");
             if (gamificationManager != null)
                 gamificationManager.StudentPerformance(experianceID, schoolId, sectionId, gradeId);
             isFirstTime = false;
@@ -163,6 +194,7 @@ public class DeviceSynHandler : MonoBehaviour
         isStartButtonPressed = isStart;
         if (isStart && !isOpenGame)
         {
+            UnityEngine.Debug.Log("[DeviceSynHandler] Starting experience activation flow...");
             isOpening = true;
             isLobby = false;
 
@@ -172,6 +204,7 @@ public class DeviceSynHandler : MonoBehaviour
             // dependency where download couldn't start without the welcome screen
             // being shown, and the welcome screen couldn't show without isSync=true).
             isOpenWelcomeScreen = false;
+            UnityEngine.Debug.Log($"[DeviceSynHandler] Enabling WelcomeScene. WelcomeScene ref: {WelcomeScene != null}, gamification welcomeSessionScene ref: {((gamificationManager != null) ? (gamificationManager.welcomeSessionScene != null).ToString() : "null")}");
             if (WelcomeScene != null) WelcomeScene.SetActive(true);
             if (gamificationManager != null
                 && gamificationManager.welcomeSessionScene != null
@@ -181,15 +214,37 @@ public class DeviceSynHandler : MonoBehaviour
             // Step 2: Show the loading bar UI (hides black sphere, reveals progress bar).
             if (loadingBar != null)
             {
-                try { loadingBar.SynchDevice(); }
+                try
+                {
+                    UnityEngine.Debug.Log("[DeviceSynHandler] Calling loadingBar.SynchDevice()");
+                    loadingBar.SynchDevice();
+                }
                 catch (System.Exception e) { UnityEngine.Debug.LogWarning("[DeviceSynHandler] LoadingBar.SynchDevice error (non-fatal): " + e.Message); }
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning("[DeviceSynHandler] loadingBar reference is null!");
             }
 
             // Step 3: Fetch experience data. Now allowed because isOpenWelcomeScreen=false.
             // API.cs will process the response, trigger asset downloads, run the loading
             // bar progress coroutine, then call SynDevice() → TTS → experience flow.
-            if (apiManager != null && !apiManager.isLoadedResponse)
-                apiManager.CallingClassVrExperiance();
+            if (apiManager != null)
+            {
+                if (!apiManager.isLoadedResponse)
+                {
+                    UnityEngine.Debug.Log("[DeviceSynHandler] Requesting experience details via apiManager.CallingClassVrExperiance()");
+                    apiManager.CallingClassVrExperiance();
+                }
+                else
+                {
+                    UnityEngine.Debug.Log("[DeviceSynHandler] Experience already loaded (isLoadedResponse = true). skipping Web Request.");
+                }
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("[DeviceSynHandler] apiManager reference is null! Cannot fetch experience data.");
+            }
 
             isOpenGame = true;
         }
@@ -200,6 +255,7 @@ public class DeviceSynHandler : MonoBehaviour
         {
             if (isPaused && !_isPaused)
             {
+                UnityEngine.Debug.Log("[DeviceSynHandler] Pausing VR Experience.");
                 _isPaused = true;
                 _lastPublishedFingerprint = string.Empty; // force heartbeat republish
                 PublishStateIfChanged(force: true);
@@ -207,6 +263,7 @@ public class DeviceSynHandler : MonoBehaviour
             }
             else if (!isPaused && _isPaused)
             {
+                UnityEngine.Debug.Log("[DeviceSynHandler] Resuming VR Experience.");
                 _isPaused = false;
                 _lastPublishedFingerprint = string.Empty;
                 PublishStateIfChanged(force: true);
@@ -216,16 +273,50 @@ public class DeviceSynHandler : MonoBehaviour
 
         if (isStop && isOpening && !string.IsNullOrEmpty(payload["experienceId"]) && !isStopCalling)
         {
+            UnityEngine.Debug.Log("[DeviceSynHandler] Stop session event received. Loading lobby scene...");
             isStartButtonPressed = false;
             isStopCalling = true;
         }
+    }
+
+    public void TriggerWebGLAutoStart()
+    {
+        if (isOpenGame) return;
+
+        UnityEngine.Debug.Log("[DeviceSynHandler] Triggering WebGL auto-start experience activation UI flow.");
+        isOpening = true;
+        isLobby = false;
+        isOpenWelcomeScreen = false;
+        isStartButtonPressed = true;
+
+        if (WelcomeScene != null) WelcomeScene.SetActive(true);
+        if (gamificationManager != null
+            && gamificationManager.welcomeSessionScene != null
+            && gamificationManager.welcomeSessionScene != WelcomeScene)
+            gamificationManager.welcomeSessionScene.SetActive(true);
+
+        if (loadingBar != null)
+        {
+            try
+            {
+                UnityEngine.Debug.Log("[DeviceSynHandler] Calling loadingBar.SynchDevice() for WebGL auto-start.");
+                loadingBar.SynchDevice();
+            }
+            catch (System.Exception e) { UnityEngine.Debug.LogWarning("[DeviceSynHandler] LoadingBar.SynchDevice error (non-fatal): " + e.Message); }
+        }
+        else
+        {
+            UnityEngine.Debug.LogWarning("[DeviceSynHandler] loadingBar reference is null!");
+        }
+
+        isOpenGame = true;
     }
 
     private void HandleCommand(JSONNode cmd)
     {
         if (cmd == null) return;
         string action = cmd["action"];
-        string msgId  = cmd["msgId"];
+        string msgId = cmd["msgId"];
         KlassMqttClient.Instance?.PublishCmdAck(msgId, ok: true);
         // "stop" reloads the scene (returns to lobby); "disconnect" does the same
         // and is sent when a teacher explicitly removes a device mid-session.
@@ -236,7 +327,7 @@ public class DeviceSynHandler : MonoBehaviour
         else if (action == "clearHand") LowerHand();
     }
 
-    public void ActiveDeviceStatus()      => PublishStateIfChanged(force: false);
+    public void ActiveDeviceStatus() => PublishStateIfChanged(force: false);
 
     private void PauseVR()
     {
@@ -332,16 +423,16 @@ public class DeviceSynHandler : MonoBehaviour
         var mqtt = KlassMqttClient.Instance;
         if (mqtt == null || !mqtt.IsConnected) return;
 
-        bool active    = true;
-        bool synced    = isSync;
+        bool active = true;
+        bool synced = isSync;
         bool completed = isGameOver;
-        int progress   = synced ? 100 : Mathf.Clamp(_downloadProgress, 0, 100);
+        int progress = synced ? 100 : Mathf.Clamp(_downloadProgress, 0, 100);
         string playState;
-        if (completed)          playState = "completed";
-        else if (_isPaused)     playState = "paused";
-        else if (synced)        playState = "playing";
-        else if (progress > 0)  playState = "downloading";
-        else                    playState = "idle";
+        if (completed) playState = "completed";
+        else if (_isPaused) playState = "paused";
+        else if (synced) playState = "playing";
+        else if (progress > 0) playState = "downloading";
+        else playState = "idle";
 
         // Include pause + progress in the fingerprint so any change triggers a publish.
         var fp = $"{active}|{synced}|{completed}|{progress}|{playState}|{_isPaused}|{_handRaised}";
@@ -350,8 +441,8 @@ public class DeviceSynHandler : MonoBehaviour
 
         mqtt.PublishStateWithProgress(active, synced, completed, progress, playState, null, _handRaised);
 
-        isActiveDevice    = active;
-        isSyncedDevice    = synced;
+        isActiveDevice = active;
+        isSyncedDevice = synced;
         isCompletedDevice = completed;
     }
 

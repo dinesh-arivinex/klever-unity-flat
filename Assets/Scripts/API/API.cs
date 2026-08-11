@@ -1,4 +1,5 @@
 
+// LATEST UPDATE: SECURE WEB GET PARSE LOGGING ACTIVE
 using GLTFast.Schema;
 using NativeWebView;
 using SimpleJSON;
@@ -52,7 +53,7 @@ public class API : MonoBehaviour
     private VideoManager videoManager;
     public VideoPlayer youtubevideoPlayer;
     public bool is360Image;
-   
+
     public string youtubeURL;
     private AddingImage addingImage;
     private List<float> modelDisplayTime = new List<float>();
@@ -94,26 +95,22 @@ public class API : MonoBehaviour
     }
     public IEnumerator WebGetRequest(string api)
     {
-
         var apireq = api;
         string jsonData;
         var req = new UnityWebRequest(apireq, "GET");
-        //  byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(SystemInfo.deviceUniqueIdentifier);
-        // req.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
-        req.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
 
-        //uncomment device id
-         req.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
-       // req.SetRequestHeader("device-id","aj4y");
-       
-        req.certificateHandler = new BypassCertificateHandler();
+        // Set device authentication header
+        req.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
+        UnityEngine.Debug.Log($"[API] Querying experience API: {apireq} with device-id header: {Klass.Net.KlassDeviceIdentity.Value}");
 
-        req.downloadHandler = new DownloadHandlerBuffer();
+        req.certificateHandler = new BypassCertificateHandler();
         yield return req.Send();
+
         if (req.isNetworkError) // error in request
         {
-            DebugUtil.Log("Error While Sending: " + req.error);
+            UnityEngine.Debug.LogError($"[API] WebGetRequest network error: {req.error}");
             // Report download failure to teacher dashboard via MQTT.
             var synHandler = FindObjectOfType<DeviceSynHandler>();
             if (synHandler != null)
@@ -121,48 +118,55 @@ public class API : MonoBehaviour
         }
         else
         {
-
-
             jsonData = req.downloadHandler.text;
-            Debug.Log("JsonData:"+jsonData);
+            UnityEngine.Debug.Log($"[API] WebGetRequest response code: {req.responseCode}, raw payload: {jsonData}");
             bool parseAsArray = false;
             try
             {
-                // Attempt to parse the response JSON as an object
-                var responseData = JsonUtility.FromJson<ApiResponse>(req.downloadHandler.text);
-                DebugUtil.Log("Response Data: " + responseData);
+                // Attempt to parse the response JSON as an object (e.g. registration error or configuration)
+                var responseData = JsonUtility.FromJson<ApiResponse>(jsonData);
+                UnityEngine.Debug.Log($"[API] Parsed as ApiResponse object: code={responseData.code}, message={responseData.message}");
                 DeviceID.SetActive(true);
                 DeviceIDManager deviceIDManager = DeviceID.GetComponent<DeviceIDManager>();
                 deviceIDManager.OneTimeDeviceConfiguration();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                UnityEngine.Debug.Log($"[API] JsonUtility object parsing threw (expected for array payloads): {ex.Message}. Treating as experience array.");
                 parseAsArray = true;
             }
 
             if (parseAsArray)
             {
-                if (DeviceSynHandler.isOpenWelcomeScreen == false && isLoadedResponse != true)
+                // Parse experience data defensively first so we can check if it holds a valid session/experience (i.e. starts enabled)
+                JSONNode spaceData = null;
+                try
                 {
-                    // Defensive parse: bail early if the server returned anything
-                    // that isn't a JSON array with at least one experience entry.
-                    // Previously a malformed/empty body crashed the VR app at
-                    // `spaceData[0]["session"]` before the loading panel showed.
-                    JSONNode spaceData = null;
-                    bool isParsingDone = false;
-#if UNITY_WEBGL && !UNITY_EDITOR
-                    // WebGL has no managed background threads. Task.Run can leave
-                    // the loading coroutine waiting forever, so parse on Unity's
-                    // main thread for the browser build.
-                    try { spaceData = JSONNode.Parse(jsonData); } catch { spaceData = null; }
-                    isParsingDone = true;
-#else
-                    Task.Run(() => {
-                        try { spaceData = JSONNode.Parse(jsonData); } catch { spaceData = null; }
-                        isParsingDone = true;
-                    });
+                    spaceData = JSONNode.Parse(jsonData);
+                }
+                catch
+                {
+                    spaceData = null;
+                }
+
+                bool hasValidExperience = (spaceData != null && spaceData.Count > 0 && spaceData[0] != null && spaceData[0]["session"] != null);
+
+                // Determine if we should auto-start on WebGL
+                bool isWebGl = false;
+#if UNITY_WEBGL
+                isWebGl = true;
 #endif
-                    yield return new WaitUntil(() => isParsingDone);
+                if (Application.platform == RuntimePlatform.WebGLPlayer)
+                {
+                    isWebGl = true;
+                }
+
+                bool shouldBypassForWebGl = isWebGl && hasValidExperience;
+
+                UnityEngine.Debug.Log($"[API] State Validation check: isOpenWelcomeScreen={DeviceSynHandler.isOpenWelcomeScreen} (needed: false), isLoadedResponse={isLoadedResponse} (needed: false), shouldBypassForWebGl={shouldBypassForWebGl}");
+                if ((DeviceSynHandler.isOpenWelcomeScreen == false || shouldBypassForWebGl) && isLoadedResponse != true)
+                {
+                    UnityEngine.Debug.Log("[API] State validation succeeded. Parsing experience data...");
                     if (spaceData == null || spaceData.Count == 0 || spaceData[0] == null)
                     {
                         DebugUtil.Log("[API] Experience response was empty or unparseable — aborting load.");
@@ -180,6 +184,28 @@ public class API : MonoBehaviour
                     JSONNode session = spaceData[0]["session"];
                     string sessionId = session != null ? session["_id"].Value : "";
                     string sessionTimeAndDate = session != null ? session["sessionTimeAndDate"].Value : "";
+
+                    // If we bypassed validation because of WebGL, we trigger the autostart UI flow on the sync handler
+                    if (shouldBypassForWebGl && DeviceSynHandler.isOpenWelcomeScreen)
+                    {
+                        var synHandler = GameManager.Instance.deviceSynHandler != null ? GameManager.Instance.deviceSynHandler : FindObjectOfType<DeviceSynHandler>();
+                        if (synHandler != null)
+                        {
+                            UnityEngine.Debug.Log("[API] Bypassing lobby waiting state on WebGL. Triggering autostart UI flow.");
+                            synHandler.TriggerWebGLAutoStart();
+                        }
+                    }
+
+                    // Initialize StudentPerformance on WebGL if not already done
+                    if (shouldBypassForWebGl && GameManager.Instance.gamificationManager != null)
+                    {
+                        string schoolId = (session != null && session["teacherId"] != null) ? session["teacherId"]["schoolId"].Value : "";
+                        string gradeId = session != null ? session["grade"].Value : "";
+                        string sectionId = ""; // No section ID in the REST response session payload
+
+                        UnityEngine.Debug.Log($"[API] WebGL auto-start: Initializing Student Performance references with SessionID={sessionId}, SchoolID={schoolId}, GradeID={gradeId}");
+                        GameManager.Instance.gamificationManager.StudentPerformance(sessionId, schoolId, sectionId, gradeId);
+                    }
 
                     JSONArray assessments = spaceData[0]["assessments"].AsArray;
                     if (assessments != null && assessments.Count > 0)
@@ -245,139 +271,139 @@ public class API : MonoBehaviour
                         bool isPlayingSimulation = false;
                         JSONArray selectedSimulationDetails = null;
 
-                         JSONArray simulationDetails = content["simulationDetails"].AsArray;
-                         JSONArray scholarLabSimulationDetails = content["scholarlabSimulationDetails"].AsArray;
-                         JSONArray objectXRDetails = content["objectxrSimulationDetails"].AsArray;
- 
-                         // Priority:
-                         // 1. simulationDetails
-                         // 2. scholarlabSimulationDetails
-                         // 3. objectXRDetails
- 
-                         if (simulationDetails != null && simulationDetails.Count > 0)
-                         {
-                             webManager.isobjectXR = false;
-                             selectedSimulationDetails = simulationDetails;
-                         }
-                         else if (scholarLabSimulationDetails != null && scholarLabSimulationDetails.Count > 0)
-                         {
+                        JSONArray simulationDetails = content["simulationDetails"].AsArray;
+                        JSONArray scholarLabSimulationDetails = content["scholarlabSimulationDetails"].AsArray;
+                        JSONArray objectXRDetails = content["objectxrSimulationDetails"].AsArray;
+
+                        // Priority:
+                        // 1. simulationDetails
+                        // 2. scholarlabSimulationDetails
+                        // 3. objectXRDetails
+
+                        if (simulationDetails != null && simulationDetails.Count > 0)
+                        {
+                            webManager.isobjectXR = false;
+                            selectedSimulationDetails = simulationDetails;
+                        }
+                        else if (scholarLabSimulationDetails != null && scholarLabSimulationDetails.Count > 0)
+                        {
                             webManager.isobjectXR = false;
                             selectedSimulationDetails = scholarLabSimulationDetails;
-                         }
-                         else if (objectXRDetails != null && objectXRDetails.Count > 0)
-                         {
+                        }
+                        else if (objectXRDetails != null && objectXRDetails.Count > 0)
+                        {
                             webManager.isobjectXR = true;
                             selectedSimulationDetails = objectXRDetails;
-                         }
- 
-                         if (selectedSimulationDetails != null)
-                         {
-                             foreach (JSONNode simulationDetail in selectedSimulationDetails)
-                             {
-                                 string simulationScript = simulationDetail["script"];
-                                 string displayTime = simulationDetail["displayTime"];
-                                 string simulationURL = string.Empty;
- 
-                                 // Normal Simulation
-                                 if (simulationDetail["simulationId"] != null &&
-                                     !string.IsNullOrEmpty(simulationDetail["simulationId"]["simulationURL"]))
-                                 {
-                                     simulationURL = simulationDetail["simulationId"]["simulationURL"];
-                                 }
-                                 // ScholarLab Simulation
-                                 else if (!string.IsNullOrEmpty(simulationDetail["simulationURL"]))
-                                 {
-                                     simulationURL = simulationDetail["simulationURL"];
-                                 }
-                                 // Object XR Simulation (direct url)
-                                 else if (!string.IsNullOrEmpty(simulationDetail["simulationUrl"]))
-                                 {
-                                     simulationURL = simulationDetail["simulationUrl"];
-                                 }
- 
-                                 if (!string.IsNullOrEmpty(simulationURL))
-                                 {
-                                     if (WebViewController.Instance == null)
-                                     {
-                                         GameManager.Instance.simulationManagerObj.SetActive(true);
-                                     }
+                        }
 
-                                     if (WebViewController.Instance != null)
-                                     {
-                                         WebViewController.Instance.displayTimeStr = displayTime;
-                                         WebViewController.Instance._fallbackUrl = simulationURL;
-                                     }
-                                     isPlayingSimulation = true;
-                                     DebugUtil.Log("Simulation URL: " + simulationURL);
-                                     DebugUtil.Log("Display Time: " + displayTime);
-                                 }
-                             }
-                         }
+                        if (selectedSimulationDetails != null)
+                        {
+                            foreach (JSONNode simulationDetail in selectedSimulationDetails)
+                            {
+                                string simulationScript = simulationDetail["script"];
+                                string displayTime = simulationDetail["displayTime"];
+                                string simulationURL = string.Empty;
+
+                                // Normal Simulation
+                                if (simulationDetail["simulationId"] != null &&
+                                    !string.IsNullOrEmpty(simulationDetail["simulationId"]["simulationURL"]))
+                                {
+                                    simulationURL = simulationDetail["simulationId"]["simulationURL"];
+                                }
+                                // ScholarLab Simulation
+                                else if (!string.IsNullOrEmpty(simulationDetail["simulationURL"]))
+                                {
+                                    simulationURL = simulationDetail["simulationURL"];
+                                }
+                                // Object XR Simulation (direct url)
+                                else if (!string.IsNullOrEmpty(simulationDetail["simulationUrl"]))
+                                {
+                                    simulationURL = simulationDetail["simulationUrl"];
+                                }
+
+                                if (!string.IsNullOrEmpty(simulationURL))
+                                {
+                                    if (WebViewController.Instance == null)
+                                    {
+                                        GameManager.Instance.simulationManagerObj.SetActive(true);
+                                    }
+
+                                    if (WebViewController.Instance != null)
+                                    {
+                                        WebViewController.Instance.displayTimeStr = displayTime;
+                                        WebViewController.Instance._fallbackUrl = simulationURL;
+                                    }
+                                    isPlayingSimulation = true;
+                                    DebugUtil.Log("Simulation URL: " + simulationURL);
+                                    DebugUtil.Log("Display Time: " + displayTime);
+                                }
+                            }
+                        }
 
                         JSONArray imageDetails = content["imageDetails"].AsArray;
-                        
+
 
                         // Check if imageDetails is not null and has elements
                         if (imageDetails != null && imageDetails.Count > 0)
                         {
-                            isThreeSixty=true;
+                            isThreeSixty = true;
                             GameManager.Instance.isImageSkip = false;
                             // Access the imageURL field from the first element of imageDetails
-                            string imageTime  = imageDetails[0]["displayTime"];
+                            string imageTime = imageDetails[0]["displayTime"];
                             string imageUrl = imageDetails[0]["ImageId"]["imageURL"];
                             string imageScript = imageDetails[0]["script"];
                             DebugUtil.Log("Image URL: " + imageUrl);
-                            if(!string.IsNullOrEmpty(imageUrl))
+                            if (!string.IsNullOrEmpty(imageUrl))
                             {
                                 is360Image = true;
-                                addingImage.LoadAndAssignImage(imageUrl, imageScript,imageTime);
+                                addingImage.LoadAndAssignImage(imageUrl, imageScript, imageTime);
                             }
                         }
                         // Iterate over the modelDetails array
                         if (modelDetails != null) foreach (JSONNode modelDetail in modelDetails)
-                        {
-                            string modelTimer = modelDetail["displayTime"];
-                            if (modelTimer != null)
                             {
-                                string[] timeParts = modelTimer.Split(':');
-
-                                int minutes = int.Parse(timeParts[0]);
-                                int seconds = int.Parse(timeParts[1]);
-
-
-                                int totalSeconds = minutes * 60 + seconds;
-                                float totalSecondsFloat = (float)totalSeconds;
-                                modelDisplayTime.Add(totalSecondsFloat);
-                                PlayerPrefs.SetFloat("totslTime", totalSecondsFloat);
-
-                            }
-                            //   float floatTimer = float.Parse(modelTimer);
-                            // PlayerPrefs.SetFloat(floatTimer);
-                            if (modelDetail["modelId"] != null)
-                            {
-                                string url = modelDetail["modelId"]["modelUrl"];
-                                allUrl.Add(url);
-                            }
-                            // Check if modelCoordinates exists and is not null
-                            if (modelDetail["modelCoordinates"] != null)
-                            {
-                                // Now check if annotations exist within modelCoordinates
-                                JSONNode annotationsNode = modelDetail["modelCoordinates"];
-                                if (annotationsNode != null && annotationsNode.AsArray.Count > 0) // Making sure annotations is not null and has elements
+                                string modelTimer = modelDetail["displayTime"];
+                                if (modelTimer != null)
                                 {
-                                    string annotationsJson = annotationsNode.ToString();
-                                    modelCoordinateCount.Add(annotationIncrimenter);
-                                    allAnnotations.Add(annotationsJson);
+                                    string[] timeParts = modelTimer.Split(':');
+
+                                    int minutes = int.Parse(timeParts[0]);
+                                    int seconds = int.Parse(timeParts[1]);
+
+
+                                    int totalSeconds = minutes * 60 + seconds;
+                                    float totalSecondsFloat = (float)totalSeconds;
+                                    modelDisplayTime.Add(totalSecondsFloat);
+                                    PlayerPrefs.SetFloat("totslTime", totalSecondsFloat);
+
                                 }
+                                //   float floatTimer = float.Parse(modelTimer);
+                                // PlayerPrefs.SetFloat(floatTimer);
+                                if (modelDetail["modelId"] != null)
+                                {
+                                    string url = modelDetail["modelId"]["modelUrl"];
+                                    allUrl.Add(url);
+                                }
+                                // Check if modelCoordinates exists and is not null
+                                if (modelDetail["modelCoordinates"] != null)
+                                {
+                                    // Now check if annotations exist within modelCoordinates
+                                    JSONNode annotationsNode = modelDetail["modelCoordinates"];
+                                    if (annotationsNode != null && annotationsNode.AsArray.Count > 0) // Making sure annotations is not null and has elements
+                                    {
+                                        string annotationsJson = annotationsNode.ToString();
+                                        modelCoordinateCount.Add(annotationIncrimenter);
+                                        allAnnotations.Add(annotationsJson);
+                                    }
+                                }
+                                annotationIncrimenter++;
                             }
-                            annotationIncrimenter++;
-                        }
                         assetDownloader.FetchingTimer(modelDisplayTime);
 
 
                         if (modelDetails != null && modelDetails.Count > 0)
                         {
-                           
+
                             isModelDownload = true;
                             threesixtyImageManager.ModelStatus(isModelDownload);
                             allModelDetails = modelDetails;
@@ -396,14 +422,14 @@ public class API : MonoBehaviour
                             isPlayingVideo = true;
                             UpdateVideoPreferences(videoDetail);
                         }
-                        else if(!string.IsNullOrEmpty(youTubeUrl)&& !string.IsNullOrEmpty(youTubeDownloadableUrl))
+                        else if (!string.IsNullOrEmpty(youTubeUrl) && !string.IsNullOrEmpty(youTubeDownloadableUrl))
                         {
                             isPlayingVideo = true;
-                           
-                            
-                          //  youTubeUrl = youtubevideoPlayer.url;
-                            UpdateYoutubePreferance(youTubeVideoAudio, youTubeVideoScript, youTubeStartTimer, youTubeEndTimer,youTubeUrl, youTubeDownloadableUrl, youTubeVideoStatus);
-                         
+
+
+                            //  youTubeUrl = youtubevideoPlayer.url;
+                            UpdateYoutubePreferance(youTubeVideoAudio, youTubeVideoScript, youTubeStartTimer, youTubeEndTimer, youTubeUrl, youTubeDownloadableUrl, youTubeVideoStatus);
+
                         }
                         else
                         {
@@ -455,7 +481,7 @@ public class API : MonoBehaviour
                                 }
                             }
                         }
-                        
+
                         // Yield to the main thread to render the VR frame before processing the next content
                         yield return null;
                     }
@@ -466,7 +492,7 @@ public class API : MonoBehaviour
                 }
                 else
                 {
-                    DebugUtil.Log("notsynched");
+                    UnityEngine.Debug.LogWarning($"[API] Experience response ignored because either isLoadedResponse is true ({isLoadedResponse}) or the welcome screen is still considered open (isOpenWelcomeScreen={DeviceSynHandler.isOpenWelcomeScreen}).");
                 }
                 // If parsing as an object fails, it's likely a plain string response
 
@@ -480,7 +506,7 @@ public class API : MonoBehaviour
     }
 
 
-   
+
     private void UpdateModelPreferences(List<Dictionary<string, string>> modelIds)
     {
         string modelScript = modelDetail["script"];
@@ -560,14 +586,14 @@ public class API : MonoBehaviour
         PlayerPrefs.SetString(StaticStrings.videoScript, videoScript);
         PlayerPrefs.SetString(StaticStrings.videoSound, videoSound);
     }
-    public void UpdateYoutubePreferance(bool youTubeVideoAudio, string youTubeVideoScript, string youTubeStartTimer, string youTubeEndTimer,string youTubeUrl,string youTubeDownloadableUrl,string status)
+    public void UpdateYoutubePreferance(bool youTubeVideoAudio, string youTubeVideoScript, string youTubeStartTimer, string youTubeEndTimer, string youTubeUrl, string youTubeDownloadableUrl, string status)
     {
         PlayerPrefs.SetString(StaticStrings.videoUrl, youTubeDownloadableUrl);
         PlayerPrefs.SetString(StaticStrings.videoScript, youTubeVideoScript);
-        videoManager.AssignYoutubeProperty(youTubeStartTimer, youTubeEndTimer, youTubeVideoAudio, youTubeUrl, youTubeDownloadableUrl, youTubeVideoScript,status);
+        videoManager.AssignYoutubeProperty(youTubeStartTimer, youTubeEndTimer, youTubeVideoAudio, youTubeUrl, youTubeDownloadableUrl, youTubeVideoScript, status);
 
     }
-  
+
 }
 public class BypassCertificateHandler : CertificateHandler
 {

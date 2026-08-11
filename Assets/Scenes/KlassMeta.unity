@@ -59123,11 +59123,11 @@ MonoBehaviour:
   - {fileID: 1296598421396877913}
   - {fileID: 6635335382654907291}
   AnswerPlacement:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 425287493}
+  - {fileID: 660679666}
+  - {fileID: 1072667386}
+  - {fileID: 1583679969}
+  - {fileID: 1222061550}
 --- !u!1 &5024241073477736701
 GameObject:
   m_ObjectHideFlags: 0
@@ -66148,11 +66148,11 @@ MonoBehaviour:
   - {fileID: 1296598421396877913}
   - {fileID: 6635335382654907291}
   answerPlacedTextFillIt:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 425287493}
+  - {fileID: 660679666}
+  - {fileID: 1072667386}
+  - {fileID: 1583679969}
+  - {fileID: 1222061550}
   questionsMatchIt: []
   answersMatchIt: []
   answerPlacedTextMatchIt: []
