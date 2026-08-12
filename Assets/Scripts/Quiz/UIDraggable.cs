@@ -27,6 +27,13 @@ public class UIDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        int dragLayer = LayerMask.NameToLayer("Drag");
+        if (dragLayer != -1 && gameObject.layer != dragLayer)
+        {
+            eventData.pointerDrag = null;
+            return;
+        }
+
         Debug.Log("UIDraggable: OnBeginDrag fired for " + gameObject.name);
         originalPosition = transform.position;
         originalParent = transform.parent;
@@ -75,8 +82,19 @@ public class UIDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         if (!isDroppedSuccessfully)
         {
             // Snap back if dropped in an invalid area
-            transform.SetParent(originalParent, true);
+            if (originalParent != null)
+            {
+                transform.SetParent(originalParent, true);
+            }
             transform.position = originalPosition;
+        }
+        else
+        {
+            // Dropped successfully - return to original parent keeping world position
+            if (originalParent != null)
+            {
+                transform.SetParent(originalParent, true);
+            }
         }
     }
 }

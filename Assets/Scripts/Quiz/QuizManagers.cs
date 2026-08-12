@@ -86,6 +86,7 @@ public class QuizManagers : MonoBehaviour
 
     private void OnEnable()
     {
+        ResolveReferenceManagers();
         StartCoroutine(ResetProcessingNext());
         // --- ADDED FOR PC/WEBGL UI SUPPORT ---
         if (UnityEngine.EventSystems.EventSystem.current == null)
@@ -121,13 +122,43 @@ public class QuizManagers : MonoBehaviour
         }
         if (answersMatchIt != null)
         {
+            int dragLayer = LayerMask.NameToLayer("Drag");
+            ColliderTriggerMatch colTrigger = FindAnyObjectByType<ColliderTriggerMatch>();
             foreach (var answerObj in answersMatchIt)
             {
-                if (answerObj != null && answerObj.GetComponent<UIDraggable>() == null)
+                if (answerObj != null)
                 {
-                    // For MatchIt, we want the root Answer parent to be dragged. 
-                    // Usually this is the Answer1Pos / Answer2Pos object itself.
-                    answerObj.AddComponent<UIDraggable>();
+                    GameObject targetDraggable = answerObj;
+                    Transform parentTrans = answerObj.transform.parent;
+                    if (parentTrans != null && colTrigger != null)
+                    {
+                        if (parentTrans.gameObject == colTrigger.Answer1Pos ||
+                            parentTrans.gameObject == colTrigger.Answer2Pos ||
+                            parentTrans.gameObject == colTrigger.Answer3Pos ||
+                            parentTrans.gameObject == colTrigger.Answer4Pos)
+                        {
+                            targetDraggable = parentTrans.gameObject;
+                        }
+                    }
+
+                    if (dragLayer != -1)
+                    {
+                        SetLayerRecursively(targetDraggable, dragLayer);
+                    }
+
+                    if (targetDraggable.GetComponent<UIDraggable>() == null)
+                    {
+                        targetDraggable.AddComponent<UIDraggable>();
+                    }
+                    if (targetDraggable.GetComponent<CanvasGroup>() == null)
+                    {
+                        targetDraggable.AddComponent<CanvasGroup>();
+                    }
+                    CanvasGroup cg = targetDraggable.GetComponent<CanvasGroup>();
+                    if (cg != null) cg.blocksRaycasts = true;
+
+                    UnityEngine.UI.Graphic[] graphics = targetDraggable.GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
+                    foreach (var g in graphics) g.raycastTarget = true;
                 }
             }
         }
@@ -135,8 +166,18 @@ public class QuizManagers : MonoBehaviour
 
         gamificationManager = FindAnyObjectByType<GamificationManager>();
         apiManager = FindAnyObjectByType<API>();
-        Wrapper wrapper = JsonUtility.FromJson<Wrapper>("{\"questions\":" + apiManager.assessmentsString + "}");
-        //questions = wrapper.questions;
+        if (apiManager != null && !string.IsNullOrEmpty(apiManager.assessmentsString))
+        {
+            try
+            {
+                Wrapper wrapper = JsonUtility.FromJson<Wrapper>("{\"questions\":" + apiManager.assessmentsString + "}");
+                //questions = wrapper.questions;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("QuizManagers: assessmentsString parsing failed or empty. " + ex.Message);
+            }
+        }
 
         //   DisplayQuestion();
         StartEvent.Invoke();
@@ -280,6 +321,7 @@ public class QuizManagers : MonoBehaviour
 
     public void DisplayQuestion(List<string> heading, List<AnswerData> answerOptions, string actualQuestion, string questionImageUrl)
     {
+        ResolveReferenceManagers();
         answers = answerOptions;
         if (questionText != null) questionText.text = actualQuestion;
         DisplayQuestionImage(questionImageUrl);
@@ -388,24 +430,61 @@ public class QuizManagers : MonoBehaviour
                 {
                     if (mAnswers[i] != null)
                     {
+                        if (mAnswers[i].transform.parent != null)
+                        {
+                            mAnswers[i].transform.parent.gameObject.SetActive(true);
+                        }
                         mAnswers[i].SetActive(true);
                         TextMeshProUGUI txt = mAnswers[i].GetComponentInChildren<TextMeshProUGUI>();
                         if (txt != null) txt.text = shuffledOptions[i].text;
                     }
                     if (mQuestions != null && i < mQuestions.Length && mQuestions[i] != null)
                     {
+                        if (mQuestions[i].transform.parent != null)
+                        {
+                            mQuestions[i].transform.parent.gameObject.SetActive(true);
+                        }
                         mQuestions[i].SetActive(true);
                         TextMeshProUGUI qTxt = mQuestions[i].GetComponentInChildren<TextMeshProUGUI>();
                         if (qTxt != null) qTxt.text = actualQuestion; // In case MatchIt also needs this
                     }
                     if (mPlacements != null && i < mPlacements.Length && mPlacements[i] != null)
+                    {
+                        if (mPlacements[i].transform.parent != null)
+                        {
+                            mPlacements[i].transform.parent.gameObject.SetActive(true);
+                        }
                         mPlacements[i].SetActive(true);
+                        TextMeshProUGUI pTxt = mPlacements[i].GetComponentInChildren<TextMeshProUGUI>();
+                        if (pTxt != null) pTxt.text = answerOptions[i].text;
+                    }
                 }
                 else
                 {
-                    if (mAnswers[i] != null) mAnswers[i].SetActive(false);
-                    if (mQuestions != null && i < mQuestions.Length && mQuestions[i] != null) mQuestions[i].SetActive(false);
-                    if (mPlacements != null && i < mPlacements.Length && mPlacements[i] != null) mPlacements[i].SetActive(false);
+                    if (mAnswers[i] != null)
+                    {
+                        if (mAnswers[i].transform.parent != null)
+                        {
+                            mAnswers[i].transform.parent.gameObject.SetActive(false);
+                        }
+                        mAnswers[i].SetActive(false);
+                    }
+                    if (mQuestions != null && i < mQuestions.Length && mQuestions[i] != null)
+                    {
+                        if (mQuestions[i].transform.parent != null)
+                        {
+                            mQuestions[i].transform.parent.gameObject.SetActive(false);
+                        }
+                        mQuestions[i].SetActive(false);
+                    }
+                    if (mPlacements != null && i < mPlacements.Length && mPlacements[i] != null)
+                    {
+                        if (mPlacements[i].transform.parent != null)
+                        {
+                            mPlacements[i].transform.parent.gameObject.SetActive(false);
+                        }
+                        mPlacements[i].SetActive(false);
+                    }
                 }
             }
             totQuestionMatchItCount = answerOptions.Count;
@@ -416,6 +495,28 @@ public class QuizManagers : MonoBehaviour
 
     public void DisplayMultipleQuestions(List<string> heading, List<List<AnswerData>> allAnswerOptions, List<string> actualQuestions, List<string> questionImageUrls, string gameName)
     {
+        ResolveReferenceManagers();
+
+        Debug.Log($"[MatchIt Debug] DisplayMultipleQuestions called. gameName: {gameName}");
+        Debug.Log($"[MatchIt Debug] actualQuestions.Count: {actualQuestions.Count}");
+        for (int idx = 0; idx < actualQuestions.Count; idx++)
+        {
+            Debug.Log($"  Question {idx}: \"{actualQuestions[idx]}\"");
+        }
+        Debug.Log($"[MatchIt Debug] allAnswerOptions.Count: {allAnswerOptions.Count}");
+        for (int idx = 0; idx < allAnswerOptions.Count; idx++)
+        {
+            var optList = allAnswerOptions[idx];
+            Debug.Log($"  Options List {idx} has {optList?.Count ?? 0} options:");
+            if (optList != null)
+            {
+                for (int j = 0; j < optList.Count; j++)
+                {
+                    Debug.Log($"    Option {j}: text=\"{optList[j].text}\", isCorrect={optList[j].isCorrect}, imageUrl=\"{optList[j].imageUrl}\"");
+                }
+            }
+        }
+
         DisplayQuestionImage(questionImageUrls != null && questionImageUrls.Count > 0 ? questionImageUrls[0] : null);
 
         if (MCQquestionText != null && heading.Count > 0) MCQquestionText.text = heading[0];
@@ -430,7 +531,25 @@ public class QuizManagers : MonoBehaviour
             List<AnswerData> flatOptions = new List<AnswerData>();
             foreach (var opts in allAnswerOptions)
             {
-                if (opts != null) flatOptions.AddRange(opts);
+                if (opts != null)
+                {
+                    AnswerData correctOpt = default;
+                    bool found = false;
+                    foreach (var o in opts)
+                    {
+                        if (o.isCorrect)
+                        {
+                            correctOpt = o;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found && opts.Count > 0)
+                    {
+                        correctOpt = opts[0];
+                    }
+                    flatOptions.Add(correctOpt);
+                }
             }
 
             List<AnswerData> shuffledOptions = new List<AnswerData>(flatOptions);
@@ -543,7 +662,25 @@ public class QuizManagers : MonoBehaviour
             List<AnswerData> flatOptions = new List<AnswerData>();
             foreach (var opts in allAnswerOptions)
             {
-                if (opts != null) flatOptions.AddRange(opts);
+                if (opts != null)
+                {
+                    AnswerData correctOpt = default;
+                    bool found = false;
+                    foreach (var o in opts)
+                    {
+                        if (o.isCorrect)
+                        {
+                            correctOpt = o;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found && opts.Count > 0)
+                    {
+                        correctOpt = opts[0];
+                    }
+                    flatOptions.Add(correctOpt);
+                }
             }
 
             List<AnswerData> shuffledOptions = new List<AnswerData>(flatOptions);
@@ -563,28 +700,65 @@ public class QuizManagers : MonoBehaviour
                     {
                         if (mAnswers[i] != null)
                         {
+                            GameObject targetDraggable = mAnswers[i];
+                            Transform parentTrans = mAnswers[i].transform.parent;
+                            ColliderTriggerMatch colTrigger = FindAnyObjectByType<ColliderTriggerMatch>();
+                            if (parentTrans != null && colTrigger != null)
+                            {
+                                if (parentTrans.gameObject == colTrigger.Answer1Pos ||
+                                    parentTrans.gameObject == colTrigger.Answer2Pos ||
+                                    parentTrans.gameObject == colTrigger.Answer3Pos ||
+                                    parentTrans.gameObject == colTrigger.Answer4Pos)
+                                {
+                                    targetDraggable = parentTrans.gameObject;
+                                }
+                            }
+
+                            if (targetDraggable != null)
+                            {
+                                if (targetDraggable.transform.parent != null)
+                                {
+                                    targetDraggable.transform.parent.gameObject.SetActive(true);
+                                }
+                                targetDraggable.SetActive(true);
+
+                                int dragLayer = LayerMask.NameToLayer("Drag");
+                                if (dragLayer != -1)
+                                {
+                                    SetLayerRecursively(targetDraggable, dragLayer);
+                                }
+
+                                targetDraggable.transform.SetAsLastSibling();
+                                if (targetDraggable.GetComponent<UIDraggable>() == null)
+                                {
+                                    targetDraggable.AddComponent<UIDraggable>();
+                                }
+                                CanvasGroup cg = targetDraggable.GetComponent<CanvasGroup>();
+                                if (cg == null)
+                                {
+                                    cg = targetDraggable.AddComponent<CanvasGroup>();
+                                }
+                                if (cg != null) cg.blocksRaycasts = true;
+
+                                UnityEngine.UI.Graphic[] graphics = targetDraggable.GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
+                                foreach (var g in graphics) g.raycastTarget = true;
+                            }
+
                             mAnswers[i].SetActive(true);
-                            if (mAnswers[i].transform.parent != null)
-                            {
-                                mAnswers[i].transform.parent.SetAsLastSibling();
-                            }
-                            if (mAnswers[i].GetComponent<UIDraggable>() == null)
-                            {
-                                mAnswers[i].AddComponent<UIDraggable>();
-                            }
-                            CanvasGroup cg = mAnswers[i].GetComponent<CanvasGroup>();
-                            if (cg != null) cg.blocksRaycasts = true;
-
-                            UnityEngine.UI.Graphic[] graphics = mAnswers[i].GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
-                            foreach (var g in graphics) g.raycastTarget = true;
-
                             TextMeshProUGUI txt = mAnswers[i].GetComponentInChildren<TextMeshProUGUI>();
                             if (txt != null) txt.text = shuffledOptions[i].text;
                         }
                     }
                     else
                     {
-                        if (mAnswers[i] != null) mAnswers[i].SetActive(false);
+                        if (mAnswers[i] != null)
+                        {
+                            if (mAnswers[i].transform.parent != null)
+                            {
+                                mAnswers[i].transform.parent.gameObject.SetActive(false);
+                            }
+                            mAnswers[i].SetActive(false);
+                        }
                     }
                 }
             }
@@ -631,11 +805,27 @@ public class QuizManagers : MonoBehaviour
                 {
                     if (i < flatOptions.Count)
                     {
-                        if (mPlacements[i] != null) mPlacements[i].SetActive(true);
+                        if (mPlacements[i] != null)
+                        {
+                            if (mPlacements[i].transform.parent != null)
+                            {
+                                mPlacements[i].transform.parent.gameObject.SetActive(true);
+                            }
+                            mPlacements[i].SetActive(true);
+                            TextMeshProUGUI pTxt = mPlacements[i].GetComponentInChildren<TextMeshProUGUI>();
+                            if (pTxt != null) pTxt.text = flatOptions[i].text;
+                        }
                     }
                     else
                     {
-                        if (mPlacements[i] != null) mPlacements[i].SetActive(false);
+                        if (mPlacements[i] != null)
+                        {
+                            if (mPlacements[i].transform.parent != null)
+                            {
+                                mPlacements[i].transform.parent.gameObject.SetActive(false);
+                            }
+                            mPlacements[i].SetActive(false);
+                        }
                     }
                 }
             }
@@ -770,55 +960,27 @@ public class QuizManagers : MonoBehaviour
             DisableImagesInArray(matchItReferenceManager.Answer);
         }
 
-        colliderTriggerMatch.Answer1HandGrab.gameObject.SetActive(false);
-        colliderTriggerMatch.Answer2HandGrab.gameObject.SetActive(false);
-        colliderTriggerMatch.Answer3HandGrab.gameObject.SetActive(false);
-        colliderTriggerMatch.Answer4HandGrab.gameObject.SetActive(false);
+        int checkCount = Mathf.Min(totQuestionMatchItCount, answersMatchIt != null ? answersMatchIt.Length : 0);
+        checkCount = Mathf.Min(checkCount, answerPlacedTextMatchIt != null ? answerPlacedTextMatchIt.Length : 0);
 
-        if (answersMatchIt[0].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[0].GetComponent<TextMeshProUGUI>().text)
+        for (int i = 0; i < checkCount; i++)
         {
+            if (answersMatchIt[i] == null || answerPlacedTextMatchIt[i] == null) continue;
 
-            targetImage = answersMatchIt[0].transform.parent.GetComponent<Image>();
-            ApplyColor(correctColor, targetImage);
-            gamificationManager.mcqScore++;
-        }
-        else
-        {
-            targetImage = answersMatchIt[0].transform.parent.GetComponent<Image>();
-            ApplyColor(wrongColor, targetImage);
-        }
-        if (answersMatchIt[1].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[1].GetComponent<TextMeshProUGUI>().text)
-        {
-            targetImage = answersMatchIt[1].transform.parent.GetComponent<Image>();
-            ApplyColor(correctColor, targetImage);
-            gamificationManager.mcqScore++;
-        }
-        else
-        {
-            targetImage = answersMatchIt[1].transform.parent.GetComponent<Image>();
-            ApplyColor(wrongColor, targetImage);
-        }
-        if (answersMatchIt[2].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[2].GetComponent<TextMeshProUGUI>().text)
-        {
-            targetImage = answersMatchIt[2].transform.parent.GetComponent<Image>();
-            ApplyColor(correctColor, targetImage);
-            gamificationManager.mcqScore++;
-        }
-        else
-        {
-            targetImage = answersMatchIt[2].transform.parent.GetComponent<Image>();
-            ApplyColor(wrongColor, targetImage);
-        }
-        if (answersMatchIt[3].GetComponent<TextMeshProUGUI>().text == answerPlacedTextMatchIt[3].GetComponent<TextMeshProUGUI>().text)
-        {
-            targetImage = answersMatchIt[3].transform.parent.GetComponent<Image>();
-            ApplyColor(correctColor, targetImage);
-            gamificationManager.mcqScore++;
-        }
-        else
-        {
-            targetImage = answersMatchIt[3].transform.parent.GetComponent<Image>();
-            ApplyColor(wrongColor, targetImage);
+            TextMeshProUGUI ansTxt = answersMatchIt[i].GetComponentInChildren<TextMeshProUGUI>();
+            TextMeshProUGUI placeTxt = answerPlacedTextMatchIt[i].GetComponentInChildren<TextMeshProUGUI>();
+
+            if (ansTxt != null && placeTxt != null && ansTxt.text == placeTxt.text)
+            {
+                targetImage = answersMatchIt[i].transform.parent != null ? answersMatchIt[i].transform.parent.GetComponent<Image>() : answersMatchIt[i].GetComponent<Image>();
+                ApplyColor(correctColor, targetImage);
+                gamificationManager.mcqScore++;
+            }
+            else
+            {
+                targetImage = answersMatchIt[i].transform.parent != null ? answersMatchIt[i].transform.parent.GetComponent<Image>() : answersMatchIt[i].GetComponent<Image>();
+                ApplyColor(wrongColor, targetImage);
+            }
         }
 
         StartCoroutine(NextEnable());
@@ -901,6 +1063,77 @@ public class QuizManagers : MonoBehaviour
         if (targetImage != null)
         {
             targetImage.color = color;
+        }
+    }
+
+    private void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+        obj.layer = newLayer;
+        foreach (Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, newLayer);
+        }
+    }
+
+    private void ResolveReferenceManagers()
+    {
+        if (matchItReferenceManager == null)
+        {
+            matchItReferenceManager = GetComponent<MatchItReferenceManager>();
+        }
+        if (matchItReferenceManager == null)
+        {
+            matchItReferenceManager = GetComponentInChildren<MatchItReferenceManager>(true);
+        }
+        if (matchItReferenceManager == null)
+        {
+            matchItReferenceManager = FindAnyObjectByType<MatchItReferenceManager>();
+        }
+
+        if (matchItReferenceManager != null)
+        {
+            if (matchItReferenceManager.Answer != null && matchItReferenceManager.Answer.Length > 0 && matchItReferenceManager.Answer[0] != null)
+            {
+                answersMatchIt = matchItReferenceManager.Answer;
+            }
+            if (matchItReferenceManager.Questions != null && matchItReferenceManager.Questions.Length > 0 && matchItReferenceManager.Questions[0] != null)
+            {
+                questionsMatchIt = matchItReferenceManager.Questions;
+            }
+            if (matchItReferenceManager.AnsweTextStore != null && matchItReferenceManager.AnsweTextStore.Length > 0 && matchItReferenceManager.AnsweTextStore[0] != null)
+            {
+                answerPlacedTextMatchIt = matchItReferenceManager.AnsweTextStore;
+            }
+        }
+
+        if (fillItReferenceManager == null)
+        {
+            fillItReferenceManager = GetComponent<FillItReferenceManager>();
+        }
+        if (fillItReferenceManager == null)
+        {
+            fillItReferenceManager = GetComponentInChildren<FillItReferenceManager>(true);
+        }
+        if (fillItReferenceManager == null)
+        {
+            fillItReferenceManager = FindAnyObjectByType<FillItReferenceManager>();
+        }
+
+        if (fillItReferenceManager != null)
+        {
+            if (fillItReferenceManager.Answer != null && fillItReferenceManager.Answer.Length > 0 && fillItReferenceManager.Answer[0] != null)
+            {
+                answersFillIt = fillItReferenceManager.Answer;
+            }
+            if (fillItReferenceManager.Questions != null && fillItReferenceManager.Questions.Length > 0 && fillItReferenceManager.Questions[0] != null)
+            {
+                questionsFillIt = fillItReferenceManager.Questions;
+            }
+            if (fillItReferenceManager.AnswerPlacement != null && fillItReferenceManager.AnswerPlacement.Length > 0 && fillItReferenceManager.AnswerPlacement[0] != null)
+            {
+                answerPlacedTextFillIt = fillItReferenceManager.AnswerPlacement;
+            }
         }
     }
 }

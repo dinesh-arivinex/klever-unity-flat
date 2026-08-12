@@ -237,7 +237,7 @@ public class GamificationManager : MonoBehaviour
                   case "MatchIt":
                   case "Matchit":
                   case "Match The Following":
-                  case "MatchTheFollowing":
+                  case "MatchingFollowing":
                       SetRightHandMeshActive(true);
                       if (matchitGame != null)
                       {
@@ -252,7 +252,7 @@ public class GamificationManager : MonoBehaviour
                               while (gameCount + advanceCount < typeOfGame.Count)
                               {
                                   string peekGame = typeOfGame[gameCount + advanceCount];
-                                  if (peekGame == "MatchIt" || peekGame == "Matchit" || peekGame == "Match The Following" || peekGame == "MatchTheFollowing")
+                                  if (peekGame == "MatchIt" || peekGame == "Matchit" || peekGame == "Match The Following" || peekGame == "MatchingFollowing")
                                   {
                                       groupedQuestions.Add(questionlist[gameCount + advanceCount]);
                                       groupedOptions.Add(allOptions[gameCount + advanceCount]);
@@ -262,7 +262,7 @@ public class GamificationManager : MonoBehaviour
                                   else break;
                               }
                               
-                              qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "MatchIt");
+                              qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "MatchingFollowing");
                               
                               gameCount += (advanceCount - 1);
                               currentGameIndex += (advanceCount - 1);

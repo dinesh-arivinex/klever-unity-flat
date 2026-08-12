@@ -5,7 +5,6 @@ using UnityEngine.EventSystems;
 public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
 {
     public GameObject Answer1Pos, Answer2Pos, Answer3Pos, Answer4Pos;
-    public GameObject Answer1HandGrab, Answer2HandGrab, Answer3HandGrab, Answer4HandGrab;
 
     [HideInInspector] public Vector3 pos1, pos2, pos3, pos4;
 
@@ -23,10 +22,19 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
 
     private GameObject GetAnswerRoot(GameObject obj)
     {
-        if (Answer1Pos != null && (obj == Answer1Pos || obj.transform.IsChildOf(Answer1Pos.transform))) return Answer1Pos;
-        if (Answer2Pos != null && (obj == Answer2Pos || obj.transform.IsChildOf(Answer2Pos.transform))) return Answer2Pos;
-        if (Answer3Pos != null && (obj == Answer3Pos || obj.transform.IsChildOf(Answer3Pos.transform))) return Answer3Pos;
-        if (Answer4Pos != null && (obj == Answer4Pos || obj.transform.IsChildOf(Answer4Pos.transform))) return Answer4Pos;
+        if (obj == null) return null;
+
+        Transform checkTransform = obj.transform;
+        UIDraggable draggable = obj.GetComponent<UIDraggable>();
+        if (draggable != null && draggable.originalParent != null)
+        {
+            checkTransform = draggable.originalParent;
+        }
+
+        if (Answer1Pos != null && (obj == Answer1Pos || checkTransform == Answer1Pos.transform || checkTransform.IsChildOf(Answer1Pos.transform))) return Answer1Pos;
+        if (Answer2Pos != null && (obj == Answer2Pos || checkTransform == Answer2Pos.transform || checkTransform.IsChildOf(Answer2Pos.transform))) return Answer2Pos;
+        if (Answer3Pos != null && (obj == Answer3Pos || checkTransform == Answer3Pos.transform || checkTransform.IsChildOf(Answer3Pos.transform))) return Answer3Pos;
+        if (Answer4Pos != null && (obj == Answer4Pos || checkTransform == Answer4Pos.transform || checkTransform.IsChildOf(Answer4Pos.transform))) return Answer4Pos;
         return null;
     }
 
@@ -37,6 +45,12 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
 
         GameObject draggedAnswer = GetAnswerRoot(droppedObj);
         GameObject targetAnswer = GetAnswerRoot(gameObject);
+
+        // Fallback to raycast hovered object if the direct gameObject receiver is not one of the Answer slots
+        if (targetAnswer == null && eventData.pointerCurrentRaycast.gameObject != null)
+        {
+            targetAnswer = GetAnswerRoot(eventData.pointerCurrentRaycast.gameObject);
+        }
 
         if (draggedAnswer != null && targetAnswer != null && draggedAnswer != targetAnswer)
         {
@@ -63,7 +77,7 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
         {
             quizManager.SwapMatchItAnswers(objA, objB);
         }
-        
+
         Debug.Log($"Swapped {objA.name} and {objB.name}");
     }
 
@@ -83,7 +97,7 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
         ColliderTriggerMatch[] allMatches = FindObjectsOfType<ColliderTriggerMatch>();
         foreach (var match in allMatches)
         {
-            if (match != this) 
+            if (match != this)
             {
                 match.UpdateLocalSlot(obj, newPos);
             }
