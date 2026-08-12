@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
 {
     public GameObject Answer1Pos, Answer2Pos, Answer3Pos, Answer4Pos;
+    public GameObject Answer1HandGrab, Answer2HandGrab, Answer3HandGrab, Answer4HandGrab;
 
     [HideInInspector] public Vector3 pos1, pos2, pos3, pos4;
 
@@ -45,7 +46,7 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
 
         GameObject draggedAnswer = GetAnswerRoot(droppedObj);
         GameObject targetAnswer = GetAnswerRoot(gameObject);
-
+        
         // Fallback to raycast hovered object if the direct gameObject receiver is not one of the Answer slots
         if (targetAnswer == null && eventData.pointerCurrentRaycast.gameObject != null)
         {
@@ -77,7 +78,7 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
         {
             quizManager.SwapMatchItAnswers(objA, objB);
         }
-
+        
         Debug.Log($"Swapped {objA.name} and {objB.name}");
     }
 
@@ -97,7 +98,7 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
         ColliderTriggerMatch[] allMatches = FindObjectsOfType<ColliderTriggerMatch>();
         foreach (var match in allMatches)
         {
-            if (match != this)
+            if (match != this) 
             {
                 match.UpdateLocalSlot(obj, newPos);
             }

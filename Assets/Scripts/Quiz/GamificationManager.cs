@@ -10,12 +10,21 @@ using static GamificationManager;
 
 
 [System.Serializable]
+public struct MatchSideData
+{
+    public string text;
+    public string imageUrl;
+}
+
+[System.Serializable]
 public struct AnswerData
 {
     public string text;
     public bool isCorrect;
     public string _id;
     public string imageUrl;
+    public MatchSideData left;
+    public MatchSideData right;
 }
 public class GamificationManager : MonoBehaviour
 {
@@ -95,7 +104,7 @@ public class GamificationManager : MonoBehaviour
     {
         googleTextToSpeech = GameManager.Instance.googleTextToSpeech;
     }
-  
+
     public void AssignGames()
     {
         if (googleTextToSpeech == null && GameManager.Instance != null)
@@ -110,8 +119,8 @@ public class GamificationManager : MonoBehaviour
         if (string.IsNullOrEmpty(apiManager.assessmentsString))
         {
             CallingThankyouOutSide();
-           thankyouCanvas.SetActive(true);
-           // GameManager.Instance.AssessmentParent.SetActive(false); // Removed to prevent hiding thankyouCanvas
+            thankyouCanvas.SetActive(true);
+            // GameManager.Instance.AssessmentParent.SetActive(false); // Removed to prevent hiding thankyouCanvas
         }
         else
         {
@@ -187,7 +196,7 @@ public class GamificationManager : MonoBehaviour
                     SetRightHandMeshActive(false);
                     break;
                 case "Basketball":
-                   //  basketBallScore++;
+                    //  basketBallScore++;
                     basketballGame.SetActive(true);
                     SetRightHandMeshActive(false);
                     gamificationCollider.SetActive(true);
@@ -198,78 +207,80 @@ public class GamificationManager : MonoBehaviour
                     mcqGame.GetComponent<QuizManagers>().DisplayQuestion(headingDetails, allOptions[gameCount], questionlist[gameCount], questionImageUrlList[gameCount]);
                     mcqGame.SetActive(true);
                     break;
-                  case "FillIt":
-                  case "Fillit":
-                  case "Fill In The Blanks":
-                  case "FillInTheBlanks":
-                      SetRightHandMeshActive(true);
-                      if (fillitGame != null) 
-                      {
-                          var qm = fillitGame.GetComponent<QuizManagers>();
-                          if (qm != null)
-                          {
-                              List<string> groupedQuestions = new List<string>();
-                              List<List<AnswerData>> groupedOptions = new List<List<AnswerData>>();
-                              List<string> groupedImages = new List<string>();
-                              
-                              int advanceCount = 0;
-                              while (gameCount + advanceCount < typeOfGame.Count)
-                              {
-                                  string peekGame = typeOfGame[gameCount + advanceCount];
-                                  if (peekGame == "FillIt" || peekGame == "Fillit" || peekGame == "Fill In The Blanks" || peekGame == "FillInTheBlanks")
-                                  {
-                                      groupedQuestions.Add(questionlist[gameCount + advanceCount]);
-                                      groupedOptions.Add(allOptions[gameCount + advanceCount]);
-                                      groupedImages.Add(questionImageUrlList[gameCount + advanceCount]);
-                                      advanceCount++;
-                                  }
-                                  else break;
-                              }
-                              
-                              qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "FillIt");
-                              
-                              gameCount += (advanceCount - 1);
-                              currentGameIndex += (advanceCount - 1);
-                          }
-                          fillitGame.SetActive(true);
-                      }
-                      break;
-                  case "MatchIt":
-                  case "Matchit":
-                  case "Match The Following":
-                  case "MatchingFollowing":
-                      SetRightHandMeshActive(true);
-                      if (matchitGame != null)
-                      {
-                          var qm = matchitGame.GetComponent<QuizManagers>();
-                          if (qm != null)
-                          {
-                              List<string> groupedQuestions = new List<string>();
-                              List<List<AnswerData>> groupedOptions = new List<List<AnswerData>>();
-                              List<string> groupedImages = new List<string>();
-                              
-                              int advanceCount = 0;
-                              while (gameCount + advanceCount < typeOfGame.Count)
-                              {
-                                  string peekGame = typeOfGame[gameCount + advanceCount];
-                                  if (peekGame == "MatchIt" || peekGame == "Matchit" || peekGame == "Match The Following" || peekGame == "MatchingFollowing")
-                                  {
-                                      groupedQuestions.Add(questionlist[gameCount + advanceCount]);
-                                      groupedOptions.Add(allOptions[gameCount + advanceCount]);
-                                      groupedImages.Add(questionImageUrlList[gameCount + advanceCount]);
-                                      advanceCount++;
-                                  }
-                                  else break;
-                              }
-                              
-                              qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "MatchingFollowing");
-                              
-                              gameCount += (advanceCount - 1);
-                              currentGameIndex += (advanceCount - 1);
-                          }
-                          matchitGame.SetActive(true);
-                      }
-                      break;
+                case "FillIt":
+                case "Fillit":
+                case "Fill In The Blanks":
+                case "FillInTheBlanks":
+                    SetRightHandMeshActive(true);
+                    if (fillitGame != null)
+                    {
+                        var qm = fillitGame.GetComponent<QuizManagers>();
+                        if (qm != null)
+                        {
+                            List<string> groupedQuestions = new List<string>();
+                            List<List<AnswerData>> groupedOptions = new List<List<AnswerData>>();
+                            List<string> groupedImages = new List<string>();
+
+                            int advanceCount = 0;
+                            while (gameCount + advanceCount < typeOfGame.Count)
+                            {
+                                string peekGame = typeOfGame[gameCount + advanceCount];
+                                if (peekGame == "FillIt" || peekGame == "Fillit" || peekGame == "Fill In The Blanks" || peekGame == "FillInTheBlanks")
+                                {
+                                    groupedQuestions.Add(questionlist[gameCount + advanceCount]);
+                                    groupedOptions.Add(allOptions[gameCount + advanceCount]);
+                                    groupedImages.Add(questionImageUrlList[gameCount + advanceCount]);
+                                    advanceCount++;
+                                }
+                                else break;
+                            }
+
+                            qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "FillIt");
+
+                            gameCount += (advanceCount - 1);
+                            currentGameIndex += (advanceCount - 1);
+                        }
+                        fillitGame.SetActive(true);
+                    }
+                    break;
+                case "MatchIt":
+                case "Matchit":
+                case "Match The Following":
+                case "MatchTheFollowing":
+                case "MatchingFollowing":
+                case "Matching Following":
+                    SetRightHandMeshActive(true);
+                    if (matchitGame != null)
+                    {
+                        var qm = matchitGame.GetComponent<QuizManagers>();
+                        if (qm != null)
+                        {
+                            List<string> groupedQuestions = new List<string>();
+                            List<List<AnswerData>> groupedOptions = new List<List<AnswerData>>();
+                            List<string> groupedImages = new List<string>();
+
+                            int advanceCount = 0;
+                            while (gameCount + advanceCount < typeOfGame.Count)
+                            {
+                                string peekGame = typeOfGame[gameCount + advanceCount];
+                                if (peekGame == "MatchIt" || peekGame == "Matchit" || peekGame == "Match The Following" || peekGame == "MatchTheFollowing" || peekGame == "MatchingFollowing" || peekGame == "Matching Following")
+                                {
+                                    groupedQuestions.Add(questionlist[gameCount + advanceCount]);
+                                    groupedOptions.Add(allOptions[gameCount + advanceCount]);
+                                    groupedImages.Add(questionImageUrlList[gameCount + advanceCount]);
+                                    advanceCount++;
+                                }
+                                else break;
+                            }
+
+                            qm.DisplayMultipleQuestions(headingDetails, groupedOptions, groupedQuestions, groupedImages, "MatchIt");
+
+                            gameCount += (advanceCount - 1);
+                            currentGameIndex += (advanceCount - 1);
+                        }
+                        matchitGame.SetActive(true);
+                    }
+                    break;
                 default:
                     DebugUtil.LogWarning("Unknown game name: " + currentGameName);
                     break;
@@ -282,7 +293,7 @@ public class GamificationManager : MonoBehaviour
 
         }
     }
-     
+
     IEnumerator EnableThankYouCanvas(string experienceId, string schoolId, string sectionID, string gradeID)
     {
         SetRightHandMeshActive(true);
@@ -301,11 +312,11 @@ public class GamificationManager : MonoBehaviour
             // optional, defaults to 60
         };
         string jsonData = JsonUtility.ToJson(student);
-        foreach(var scoreTexts in scoreText)
+        foreach (var scoreTexts in scoreText)
         {
             if (allOptions.Count == 0)
             {
-                foreach(GameObject yourscoreText in yourScoreText)
+                foreach (GameObject yourscoreText in yourScoreText)
                 {
                     yourscoreText.SetActive(false);
                 }
@@ -313,15 +324,23 @@ public class GamificationManager : MonoBehaviour
             }
             else
             {
-                scoreTexts.text = student.score.ToString() + "/" + allOptions.Count.ToString();
+                if(currentGameName== "MatchingFollowing")
+                {
+                    scoreTexts.text = student.score.ToString() + "/" + "4";
+                }
+                else
+                {
+                    scoreTexts.text = student.score.ToString() + "/" + allOptions.Count.ToString();
+                }
+                   
             }
 
         }
         StartCoroutine(PostRequest(Klass.Net.KlassEndpoints.V1("performance"), jsonData));
         PlayerPrefs.SetString("PlayerStatus", "Completed");
         yield return new WaitForSeconds(3.5f);
-      
-      
+
+
     }
     IEnumerator PostRequest(string api, string jsonData)
     {
@@ -349,7 +368,7 @@ public class GamificationManager : MonoBehaviour
         }
 
     }
-    public void   CallingThankYouCanvas()
+    public void CallingThankYouCanvas()
     {
         foreach (GameObject item in disableObjects)
         {
@@ -363,10 +382,10 @@ public class GamificationManager : MonoBehaviour
     private string sid;
     private string sectionId;
     private string gradeId;
-    public void StudentPerformance(string experianceID,string schoolId,string sectId,string gradId)
+    public void StudentPerformance(string experianceID, string schoolId, string sectId, string gradId)
     {
         exid = experianceID;
-        sid=schoolId;
+        sid = schoolId;
         sectionId = sectId;
         gradeId = gradId;
     }
@@ -394,7 +413,7 @@ public class GamificationManager : MonoBehaviour
             case "MatchIt":
             case "Matchit":
             case "Match The Following":
-            case "MatchTheFollowing":
+            case "MatchingFollowing":
                 if (matchitGame != null) matchitGame.SetActive(false);
                 break;
             default:
@@ -409,7 +428,7 @@ public class GamificationManager : MonoBehaviour
         else
         {
             CallingThankYouCanvas();
-           //StartCoroutine(EnableThankYouCanvas());
+            //StartCoroutine(EnableThankYouCanvas());
         }
 
 
@@ -486,7 +505,7 @@ public class GamificationManager : MonoBehaviour
         {
             DebugUtil.Log("Success: " + request.downloadHandler.text);
             string value = request.downloadHandler.text;
-          
+
         }
 
     }
