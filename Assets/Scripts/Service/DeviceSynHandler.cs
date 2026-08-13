@@ -181,13 +181,14 @@ public class DeviceSynHandler : MonoBehaviour
 
         if (isFirstTime && !string.IsNullOrEmpty(payload["gradeId"]))
         {
-            string experianceID = payload["experienceId"];
+            experienceId = payload["experienceId"];
             string schoolId = payload["schoolId"];
             string sectionId = payload["sectionId"];
             string gradeId = payload["gradeId"];
-            UnityEngine.Debug.Log($"[DeviceSynHandler] Initializing Student Performance references with ExperienceID={experianceID}, SchoolID={schoolId}, SectionID={sectionId}, GradeID={gradeId}");
+            UnityEngine.Debug.Log($"[DeviceSynHandler] Initializing Student Performance references with ExperienceID={experienceId}, SchoolID={schoolId}, SectionID={sectionId}, GradeID={gradeId}");
             if (gamificationManager != null)
-                gamificationManager.StudentPerformance(experianceID, schoolId, sectionId, gradeId);
+                gamificationManager.StudentPerformance(experienceId, schoolId, sectionId, gradeId);
+            Klass.Net.LiveViewPublisher.Instance?.SetExperienceId(experienceId);
             isFirstTime = false;
         }
 
@@ -435,11 +436,11 @@ public class DeviceSynHandler : MonoBehaviour
         else playState = "idle";
 
         // Include pause + progress in the fingerprint so any change triggers a publish.
-        var fp = $"{active}|{synced}|{completed}|{progress}|{playState}|{_isPaused}|{_handRaised}";
+        var fp = $"{active}|{synced}|{completed}|{progress}|{playState}|{_isPaused}|{_handRaised}|{experienceId}";
         if (!force && fp == _lastPublishedFingerprint) return;
         _lastPublishedFingerprint = fp;
 
-        mqtt.PublishStateWithProgress(active, synced, completed, progress, playState, null, _handRaised);
+        mqtt.PublishStateWithProgress(active, synced, completed, progress, playState, experienceId, _handRaised);
 
         isActiveDevice = active;
         isSyncedDevice = synced;

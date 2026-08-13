@@ -44,6 +44,10 @@ public class RuntimeImportBehaviourHelper : MonoBehaviour
         model.transform.position = Vector3.zero;
         emptyObject.tag = "3dmodel";
         emptyObject.transform.GetChild(0).transform.localPosition = Vector3.zero;
+        string modelUrl = PlayerPrefs.GetString(StaticStrings.modelUrl);
+        var details = new SimpleJSON.JSONObject();
+        details["name"] = PlayerPrefs.GetString(StaticStrings.modelName);
+        Klass.Net.LiveViewPublisher.Instance?.ShowContent("model3d", modelUrl, modelUrl, details);
 
 
     }
@@ -173,6 +177,8 @@ public class RuntimeImportBehaviourHelper : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (extractModel != null && extractModel.activeInHierarchy)
+            Klass.Net.LiveViewPublisher.Instance?.PublishTransform(extractModel.transform);
         if(isDestroy)
         {
 

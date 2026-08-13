@@ -62,6 +62,19 @@ public class VideoManager : MonoBehaviour
         service = GameManager.Instance.serviceScript;
 
     }
+
+    private void Update()
+    {
+        if (mediaPlayer != null && mediaPlayer.gameObject.activeInHierarchy && mediaPlayer.Control != null && mediaPlayer.Info != null)
+        {
+            Klass.Net.LiveViewPublisher.Instance?.PublishPlayback(
+                mediaPlayer.Control.GetCurrentTime(), mediaPlayer.Info.GetDuration(), mediaPlayer.Control.IsPlaying());
+        }
+        else if (videoPlayer != null && videoPlayer.gameObject.activeInHierarchy && videoPlayer.isPrepared)
+        {
+            Klass.Net.LiveViewPublisher.Instance?.PublishPlayback(videoPlayer.time, videoPlayer.length, videoPlayer.isPlaying);
+        }
+    }
    
     public void MuteVolumn()
     {
@@ -103,6 +116,7 @@ public class VideoManager : MonoBehaviour
         }
         
         videoPlayerURL = PlayerPrefs.GetString(StaticStrings.videoUrl);
+        Klass.Net.LiveViewPublisher.Instance?.ShowContent("video", videoPlayerURL, videoPlayerURL);
 
         if (!string.IsNullOrEmpty(youtubeURL))
         {
