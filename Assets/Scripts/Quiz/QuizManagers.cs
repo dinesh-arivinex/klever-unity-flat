@@ -21,7 +21,7 @@ public class QuizManagers : MonoBehaviour
     public UnityEvent StartEvent;
     public UnityEvent EndEvent;
     public GameObject elementWantToDelete;
-    private int MCQstudetScore=0;
+    private int MCQstudetScore = 0;
     private GamificationManager gamificationManager;
     // public List<InteractableUnityEventWrapper> interactableWrappers = new List<InteractableUnityEventWrapper>();
     public AudioSource audioSource;
@@ -64,14 +64,14 @@ public class QuizManagers : MonoBehaviour
         public string questionImageUrl;
     }
 
-   
+
     public class Option
     {
         public string text;
         public bool isCorrect;
         public string id;
     }
-   // private List<QuestionData> questions;
+    // private List<QuestionData> questions;
     private int currentQuestionIndex = 0;
     //public MeshRenderer[] meshRender;
     public List<Option> options;
@@ -95,7 +95,7 @@ public class QuizManagers : MonoBehaviour
             esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
             esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
-        
+
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas != null)
         {
@@ -164,8 +164,8 @@ public class QuizManagers : MonoBehaviour
         }
         // -------------------------------------
 
-        gamificationManager=FindAnyObjectByType<GamificationManager>();
-        apiManager =FindAnyObjectByType<API>(); 
+        gamificationManager = FindAnyObjectByType<GamificationManager>();
+        apiManager = FindAnyObjectByType<API>();
         if (apiManager != null && !string.IsNullOrEmpty(apiManager.assessmentsString))
         {
             try
@@ -179,20 +179,20 @@ public class QuizManagers : MonoBehaviour
             }
         }
 
-     //   DisplayQuestion();
+        //   DisplayQuestion();
         StartEvent.Invoke();
         nextButton.enabled = false;
-        
+
         // Ensure listener is added only once by removing all previous listeners
         nextButton.onClick.RemoveAllListeners();
         nextButton.onClick.AddListener(NextButtonClick);
-        
+
         Invoke("DeleteElement", 4f);
         //foreach (var element in meshRender) 
         //{
         //    element.enabled = true;
         //}
-   
+
     }
 
     private void Update()
@@ -210,7 +210,7 @@ public class QuizManagers : MonoBehaviour
                 pointerEventData.position = Input.mousePosition;
                 var raycastResults = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
                 UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointerEventData, raycastResults);
-                
+
                 if (raycastResults.Count > 0)
                 {
                     Debug.Log("UI Click Raycast Hit: " + raycastResults[0].gameObject.name);
@@ -223,7 +223,7 @@ public class QuizManagers : MonoBehaviour
         }
     }
 
-    
+
 
     private void DisplayQuestionImage(string url)
     {
@@ -240,7 +240,7 @@ public class QuizManagers : MonoBehaviour
             GameObject go = new GameObject("DynamicQuestionImage");
             go.transform.SetParent(parentTransform, false);
             rawImg = go.AddComponent<RawImage>();
-            
+
             RectTransform rect = go.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(1.2f, 0.8f); // set size in world space scale, since it's on a VR Canvas
             rect.anchoredPosition = new Vector3(0f, 150f, 0f); // adjust offset relative to question text parent
@@ -276,7 +276,7 @@ public class QuizManagers : MonoBehaviour
             imgGo.transform.SetParent(button.transform, false);
             imgGo.transform.SetSiblingIndex(0); // Draw behind text
             rawImg = imgGo.AddComponent<RawImage>();
-            
+
             RectTransform rect = imgGo.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0, 0);
             rect.anchorMax = new Vector2(1, 1);
@@ -326,7 +326,7 @@ public class QuizManagers : MonoBehaviour
         if (questionText != null) questionText.text = actualQuestion;
         DisplayQuestionImage(questionImageUrl);
 
-        if (questionText != null &&  currentQuestionIndex < 1)
+        if (questionText != null && currentQuestionIndex < 1)
         {
             if (MCQquestionText != null && heading.Count > 0) MCQquestionText.text = heading[0];
             if (questionPanelText != null && heading.Count > 1) questionPanelText.text = heading[1];
@@ -499,18 +499,18 @@ public class QuizManagers : MonoBehaviour
 
         Debug.Log($"[MatchIt Debug] DisplayMultipleQuestions called. gameName: {gameName}");
         Debug.Log($"[MatchIt Debug] actualQuestions.Count: {actualQuestions.Count}");
-        for(int idx = 0; idx < actualQuestions.Count; idx++)
+        for (int idx = 0; idx < actualQuestions.Count; idx++)
         {
             Debug.Log($"  Question {idx}: \"{actualQuestions[idx]}\"");
         }
         Debug.Log($"[MatchIt Debug] allAnswerOptions.Count: {allAnswerOptions.Count}");
-        for(int idx = 0; idx < allAnswerOptions.Count; idx++)
+        for (int idx = 0; idx < allAnswerOptions.Count; idx++)
         {
             var optList = allAnswerOptions[idx];
             Debug.Log($"  Options List {idx} has {optList?.Count ?? 0} options:");
             if (optList != null)
             {
-                for(int j = 0; j < optList.Count; j++)
+                for (int j = 0; j < optList.Count; j++)
                 {
                     Debug.Log($"    Option {j}: text=\"{optList[j].text}\", isCorrect={optList[j].isCorrect}, imageUrl=\"{optList[j].imageUrl}\"");
                 }
@@ -529,12 +529,13 @@ public class QuizManagers : MonoBehaviour
             GameObject[] fPlacements = (fillItReferenceManager != null && fillItReferenceManager.AnswerPlacement != null && fillItReferenceManager.AnswerPlacement.Length > 0 && fillItReferenceManager.AnswerPlacement[0] != null) ? fillItReferenceManager.AnswerPlacement : answerPlacedTextFillIt;
 
             List<AnswerData> flatOptions = new List<AnswerData>();
-            foreach(var opts in allAnswerOptions) {
+            foreach (var opts in allAnswerOptions)
+            {
                 if (opts != null)
                 {
                     AnswerData correctOpt = default;
                     bool found = false;
-                    foreach(var o in opts)
+                    foreach (var o in opts)
                     {
                         if (o.isCorrect)
                         {
@@ -579,7 +580,7 @@ public class QuizManagers : MonoBehaviour
                             }
                             CanvasGroup cg = fAnswers[i].GetComponent<CanvasGroup>();
                             if (cg != null) cg.blocksRaycasts = true;
-                            
+
                             UnityEngine.UI.Graphic[] graphics = fAnswers[i].GetComponentsInChildren<UnityEngine.UI.Graphic>(true);
                             foreach (var g in graphics) g.raycastTarget = true;
 
@@ -593,11 +594,11 @@ public class QuizManagers : MonoBehaviour
                     }
                 }
             }
-            
+
             if (fQuestions != null)
             {
                 int countToEnable = Mathf.Max(actualQuestions.Count, flatOptions.Count);
-                for(int i = 0; i < fQuestions.Length; i++)
+                for (int i = 0; i < fQuestions.Length; i++)
                 {
                     if (i < countToEnable)
                     {
@@ -609,7 +610,7 @@ public class QuizManagers : MonoBehaviour
                             }
                             fQuestions[i].SetActive(true);
                             TextMeshProUGUI qTxt = fQuestions[i].GetComponentInChildren<TextMeshProUGUI>();
-                            if (qTxt != null) 
+                            if (qTxt != null)
                             {
                                 string textToAssign = i < actualQuestions.Count ? actualQuestions[i] : (actualQuestions.Count > 0 ? actualQuestions[0] : "");
                                 qTxt.text = textToAssign;
@@ -618,7 +619,7 @@ public class QuizManagers : MonoBehaviour
                     }
                     else
                     {
-                        if (fQuestions[i] != null) 
+                        if (fQuestions[i] != null)
                         {
                             if (fQuestions[i].transform.parent != null)
                             {
@@ -632,9 +633,9 @@ public class QuizManagers : MonoBehaviour
 
             if (fPlacements != null)
             {
-                for(int i = 0; i < fPlacements.Length; i++)
+                for (int i = 0; i < fPlacements.Length; i++)
                 {
-                    if (i < flatOptions.Count) 
+                    if (i < flatOptions.Count)
                     {
                         if (fPlacements[i] != null)
                         {
@@ -649,7 +650,7 @@ public class QuizManagers : MonoBehaviour
                     }
                 }
             }
-            
+
             totQuestionFillItCount = flatOptions.Count;
         }
         else if (gameName == "MatchIt")
@@ -700,7 +701,7 @@ public class QuizManagers : MonoBehaviour
                         {
                             correctOpt = opts[0];
                         }
-                        
+
                         string qText = qIdx < actualQuestions.Count ? actualQuestions[qIdx] : "";
                         leftTexts.Add(qText);
                         rightTexts.Add(correctOpt.text);
@@ -745,7 +746,7 @@ public class QuizManagers : MonoBehaviour
                                 targetDraggable.transform.parent.gameObject.SetActive(true);
                             }
                             targetDraggable.SetActive(true);
-                            
+
                             int dragLayer = LayerMask.NameToLayer("Drag");
                             if (dragLayer != -1)
                             {
@@ -847,7 +848,7 @@ public class QuizManagers : MonoBehaviour
                     }
                 }
             }
-            
+
             totQuestionMatchItCount = rightTexts.Count;
         }
 
@@ -872,7 +873,7 @@ public class QuizManagers : MonoBehaviour
                 // MCQstudetScore++;
                 gamificationManager.mcqScore++;
             }
-            buttonClicked = true; 
+            buttonClicked = true;
             ToggleButtonActivation(false);
             audioSource.Play();
         }
@@ -891,7 +892,7 @@ public class QuizManagers : MonoBehaviour
     {
         if (isProcessingNext) return;
         isProcessingNext = true;
-        
+
         nextButton.enabled = false;
         for (int i = 0; i < answerButtons.Length; i++)
         {
@@ -904,12 +905,12 @@ public class QuizManagers : MonoBehaviour
         currentQuestionIndex++;
         if (currentQuestionIndex < 1)
         {
-           // DisplayQuestion();
+            // DisplayQuestion();
         }
         else
         {
             reloadSceneEvent.Invoke();
-            DebugUtil.Log("Your score is"+MCQstudetScore);
+            DebugUtil.Log("Your score is" + MCQstudetScore);
             gamificationManager.OnGameCompleted();
         }
     }
@@ -932,7 +933,7 @@ public class QuizManagers : MonoBehaviour
         // This is essentially not causing any delay, consider removing or increasing the time if needed
 
         // Create a new color with baseColor RGB values but with the Alpha set to 95/255
-       // Color newColorWithAlpha = new Color(color.r, color.g, color.b, 95f / 255f);
+        // Color newColorWithAlpha = new Color(color.r, color.g, color.b, 95f / 255f);
 
         // Restore button color after the delay
         ChangeButtonColor(button, color);
@@ -952,7 +953,7 @@ public class QuizManagers : MonoBehaviour
     public void SceneReLoad()
     {
         EndEvent.Invoke();
-       // SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        // SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     private void DisableImagesInArray(GameObject[] arr)
     {
@@ -1132,7 +1133,7 @@ public class QuizManagers : MonoBehaviour
                 answerPlacedTextMatchIt = matchItReferenceManager.AnsweTextStore;
             }
         }
-        
+
         if (fillItReferenceManager == null)
         {
             fillItReferenceManager = GetComponent<FillItReferenceManager>();
