@@ -168,6 +168,7 @@ public class GamificationManager : MonoBehaviour
         {
             // string nextGameName = selectedGames[currentGameIndex];
             currentGameName = currentGame;
+            PublishCurrentAssessment();
             //if (!GamificationControllerHandSwitcher.Instance.isHandMode)
             //{
             //    GamificationControllerHandSwitcher.Instance.leftControllerRaycast.SetActive(false);
@@ -294,6 +295,26 @@ public class GamificationManager : MonoBehaviour
         }
     }
 
+    private void PublishCurrentAssessment()
+    {
+        if (gameCount < 0 || gameCount >= questionlist.Count || gameCount >= allOptions.Count) return;
+        var optionNodes = new JSONArray();
+        foreach (var option in allOptions[gameCount])
+        {
+            var node = new JSONObject();
+            node["text"] = option.text ?? string.Empty;
+            node["imageUrl"] = option.imageUrl ?? string.Empty;
+            if (!string.IsNullOrEmpty(option.left.text) || !string.IsNullOrEmpty(option.right.text))
+            {
+                var left = new JSONObject(); left["text"] = option.left.text ?? string.Empty; left["imageUrl"] = option.left.imageUrl ?? string.Empty;
+                var right = new JSONObject(); right["text"] = option.right.text ?? string.Empty; right["imageUrl"] = option.right.imageUrl ?? string.Empty;
+                node["left"] = left; node["right"] = right;
+            }
+            optionNodes.Add(node);
+        }
+        Klass.Net.LiveViewPublisher.Instance?.PublishAssessmentState(currentGameName, gameCount, questionlist[gameCount], optionNodes);
+    }
+
     IEnumerator EnableThankYouCanvas(string experienceId, string schoolId, string sectionID, string gradeID)
     {
         SetRightHandMeshActive(true);
@@ -392,6 +413,7 @@ public class GamificationManager : MonoBehaviour
 
     public void OnGameCompleted()
     {
+        Klass.Net.LiveViewPublisher.Instance?.PublishAssessmentInteraction(gameCount, null, true);
         // Disable the completed game
         switch (currentGameName)
         {

@@ -81,6 +81,7 @@ public class AddingImage : MonoBehaviour
 
     public void AssignSkyBox()
     {
+        Klass.Net.LiveViewPublisher.Instance?.ShowContent("image360", newUrl, newUrl);
         VideoSphere.SetActive(false);
         RenderSettings.skybox = skybox;
         StartCoroutine(LoadImageNew(newUrl));

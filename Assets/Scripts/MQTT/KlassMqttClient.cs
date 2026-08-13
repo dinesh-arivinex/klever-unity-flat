@@ -203,6 +203,18 @@ namespace Klass.Net
             PublishJson(MqttTopics.Telemetry(SchoolId, DeviceId), node, retain: false, qos: 0);
         }
 
+        public void PublishLiveViewState(JSONObject node)
+        {
+            if (!IsConnected) return;
+            PublishJson(MqttTopics.LiveViewState(SchoolId, DeviceId), node, retain: true, qos: 1);
+        }
+
+        public void PublishLiveViewEvent(JSONObject node)
+        {
+            if (!IsConnected) return;
+            PublishJson(MqttTopics.LiveViewEvents(SchoolId, DeviceId), node, retain: false, qos: 0);
+        }
+
         public void PublishCmdAck(string msgId, bool ok, string error = null)
         {
             if (!IsConnected) return;

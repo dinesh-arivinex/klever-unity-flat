@@ -858,6 +858,10 @@ public class QuizManagers : MonoBehaviour
     {
         if (!buttonClicked)
         {
+            var liveResponse = new SimpleJSON.JSONObject();
+            liveResponse["selectedIndex"] = selectedAnswerIndex;
+            liveResponse["selectedText"] = selectedAnswerIndex >= 0 && selectedAnswerIndex < answers.Count ? answers[selectedAnswerIndex].text : string.Empty;
+            Klass.Net.LiveViewPublisher.Instance?.PublishAssessmentInteraction(currentQuestionIndex, liveResponse, false);
             Button clickedButton = answerButtons[selectedAnswerIndex];
             // Create colors with adjusted alpha values
             Color greenWithAlpha = new Color(Color.green.r, Color.green.g, Color.green.b, 95f / 255f);
