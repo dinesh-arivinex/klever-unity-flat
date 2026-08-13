@@ -54,7 +54,7 @@ public class BasketBallQuiz : MonoBehaviour
     public GameObject basketBall;
     public GameObject arrow;
     private GamificationManager gamificationManager;
-    private List<AnswerData> answers=new List<AnswerData>();
+    public List<AnswerData> answers = new List<AnswerData>();
     private bool isProcessingNext = false;
 
     private IEnumerator ResetProcessingNext()
@@ -251,12 +251,14 @@ public class BasketBallQuiz : MonoBehaviour
             // Create colors with adjusted alpha values
             Color greenWithAlpha = new Color(Color.green.r, Color.green.g, Color.green.b, 95f / 255f);
             Color redWithAlpha = new Color(Color.red.r, Color.red.g, Color.red.b, 255f / 255f);
-            // Change button color immediately for the correct answer button
-            //int correctAnswerIndex = questions[currentQuestionIndex].options.FindIndex(option => option.isCorrect);
-            int correctAnswerIndex = answers.FindIndex(answers => answers.isCorrect);
-            ChangeButtonColor(answerButtons[correctAnswerIndex], greenWithAlpha);
-            // Change button color immediately for the clicked button
-            ChangeButtonColor(clickedButton, answers[selectedAnswerIndex].isCorrect ? greenWithAlpha : redWithAlpha);
+            // Change button color immediately for all buttons
+            for (int i = 0; i < answers.Count; i++)
+            {
+                if (i < answerButtons.Length && answerButtons[i] != null)
+                {
+                    ChangeButtonColor(answerButtons[i], answers[i].isCorrect ? greenWithAlpha : redWithAlpha);
+                }
+            }
             if (answers[selectedAnswerIndex].isCorrect)
             {
                 if(isArrow)
@@ -280,7 +282,34 @@ public class BasketBallQuiz : MonoBehaviour
     {
         foreach (var button in answerButtons)
         {
-            button.enabled = activated;
+            if (button != null)
+            {
+                button.enabled = activated;
+                Collider col = button.GetComponent<Collider>();
+                if (col != null)
+                {
+                    col.enabled = activated;
+                }
+                
+                Ontrigger trig = button.GetComponent<Ontrigger>();
+                if (trig != null)
+                {
+                    Collider trigCol = trig.GetComponent<Collider>();
+                    if (trigCol != null) trigCol.enabled = activated;
+                }
+            }
+        }
+
+        Ontrigger[] allTriggers = FindObjectsOfType<Ontrigger>();
+        foreach (var trig in allTriggers)
+        {
+            if (trig.optionsCollider != null)
+            {
+                foreach (var col in trig.optionsCollider)
+                {
+                    if (col != null) col.enabled = activated;
+                }
+            }
         }
     }
 
@@ -298,7 +327,7 @@ public class BasketBallQuiz : MonoBehaviour
             DebugUtil.Log(answerButtons[i].gameObject.name);
           
         }
-        ToggleButtonActivation(false);
+        ToggleButtonActivation(true);
         buttonClicked = false;
 
         currentQuestionIndex++;
@@ -339,6 +368,12 @@ public class BasketBallQuiz : MonoBehaviour
         {
             DebugUtil.LogError("Graphic component not found on the button.");
         }
+
+        ColorBlock cb = button.colors;
+        cb.normalColor = color;
+        cb.disabledColor = color;
+        cb.selectedColor = color;
+        button.colors = cb;
     }
 
     private IEnumerator RestoreButtonColor(Button button, Color color)

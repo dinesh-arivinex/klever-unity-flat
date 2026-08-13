@@ -930,6 +930,12 @@ public class QuizManagers : MonoBehaviour
         {
             DebugUtil.LogError("Graphic component not found on the button.");
         }
+
+        ColorBlock cb = button.colors;
+        cb.normalColor = color;
+        cb.disabledColor = color;
+        cb.selectedColor = color;
+        button.colors = cb;
     }
 
     private IEnumerator RestoreButtonColor(Button button, Color color)

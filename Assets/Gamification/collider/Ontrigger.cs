@@ -9,7 +9,9 @@ using UnityEngine.UI;
 public class Ontrigger : MonoBehaviour
 {
     private GamificationController optionSelection;
-    public Button answerButtons;
+    public BoxCollider[] optionsCollider;
+    public Button answer1Btn,answer2Btn,answer3Btn,answer4Btn;
+    public Button answerCurrentButtons;
     public Transform destination;
     public Transform staringPoint;
     public Transform staringPointArrow;
@@ -59,7 +61,53 @@ public class Ontrigger : MonoBehaviour
         if (GamificationController.isGamefication)
         {
             GamificationController.isGamefication = false;
+            if (answerCurrentButtons != null) answerCurrentButtons.onClick.Invoke();
+            DisableCollider();
+            UpdateReferencedButtonColors();
             StartSpawning();
+        }
+        else if (gamificationController != null && gamificationController.arrowstatus)
+        {
+            GamificationController.isGamefication = false;
+            gamificationController.ToggleCollider(true);
+            if (answerCurrentButtons != null) answerCurrentButtons.onClick.Invoke();
+            DisableCollider();
+            UpdateReferencedButtonColors();
+            StartSpawning();
+        }
+    }
+
+    private void DisableCollider()
+    {
+        Button[] refBtns = { answer1Btn, answer2Btn, answer3Btn, answer4Btn };
+        foreach (var btn in refBtns)
+        {
+            if (btn != null)
+            {
+                Collider col = btn.GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+                
+                Ontrigger trig = btn.GetComponent<Ontrigger>();
+                if (trig != null)
+                {
+                    Collider trigCol = trig.GetComponent<Collider>();
+                    if (trigCol != null) trigCol.enabled = false;
+                }
+            }
+        }
+
+        Collider thisCol = GetComponent<Collider>();
+        if (thisCol != null)
+        {
+            thisCol.enabled = false;
+        }
+
+        if (optionsCollider != null)
+        {
+            foreach (var col in optionsCollider)
+            {
+                if (col != null) col.enabled = false;
+            }
         }
     }
 
@@ -72,14 +120,51 @@ public class Ontrigger : MonoBehaviour
     {
         if (other.gameObject.CompareTag("BasketBall"))
         {
-            Button temp = answerButtons.GetComponent<Button>();
+            Button temp = answerCurrentButtons.GetComponent<Button>();
             temp.onClick.Invoke();
+            UpdateReferencedButtonColors();
         }
         if (other.gameObject.CompareTag("arrow"))
         {
-            Button temp = answerButtons.GetComponent<Button>();
+            Button temp = answerCurrentButtons.GetComponent<Button>();
             temp.onClick.Invoke();
+            UpdateReferencedButtonColors();
         }
+    }
+
+    private void UpdateReferencedButtonColors()
+    {
+        if (gameType == null || gameType.answers == null) return;
+        
+        Button[] refBtns = { answer1Btn, answer2Btn, answer3Btn, answer4Btn };
+        Color green = new Color(Color.green.r, Color.green.g, Color.green.b, 95f / 255f);
+        Color red = new Color(Color.red.r, Color.red.g, Color.red.b, 255f / 255f);
+
+        for (int i = 0; i < refBtns.Length; i++)
+        {
+            if (refBtns[i] != null && i < gameType.answers.Count)
+            {
+                if (gameType.answers[i].isCorrect)
+                {
+                    ChangeColor(refBtns[i], green);
+                }
+                else
+                {
+                    ChangeColor(refBtns[i], red);
+                }
+            }
+        }
+    }
+
+    private void ChangeColor(Button button, Color color)
+    {
+        Graphic graphic = button.GetComponent<Graphic>();
+        if (graphic != null) graphic.color = color;
+        ColorBlock cb = button.colors;
+        cb.normalColor = color;
+        cb.disabledColor = color;
+        cb.selectedColor = color;
+        button.colors = cb;
     }
 
     private void OnTriggerExit(Collider other)
