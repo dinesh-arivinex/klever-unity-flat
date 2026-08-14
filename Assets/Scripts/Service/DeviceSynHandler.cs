@@ -80,6 +80,7 @@ public class DeviceSynHandler : MonoBehaviour
     // cleared by the teacher dashboard via a `clearHand` MQTT command.
     private bool _handRaised;
     public bool IsHandRaised => _handRaised;
+    private string experienceId = "";
 
     void Start()
     {
