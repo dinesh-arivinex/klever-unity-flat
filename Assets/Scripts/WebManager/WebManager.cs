@@ -182,9 +182,9 @@ public class WebManager : MonoBehaviour
             {
                 _webViewPrefab.WebView.UrlChanged += (sender, eventArgs) => {
                     Debug.Log("[WebManager] URL changed: " + eventArgs.Url);
-                    if (!string.IsNullOrEmpty(eventArgs.Url) && eventArgs.Url.Contains("klever://"))
+                    if (!string.IsNullOrEmpty(eventArgs.Url) && (eventArgs.Url.Contains("klever://") || eventArgs.Url.Contains("klever-edu") || eventArgs.Url.EndsWith("/home") || eventArgs.Url.Contains("close-simulation")))
                     {
-                        Debug.Log("[WebManager] Deep link 'klever://' detected. Closing simulation.");
+                        Debug.Log("[WebManager] Deep link / Home redirect detected: " + eventArgs.Url + ". Closing simulation.");
                         CheckTheStatus();
                     }
                 };
