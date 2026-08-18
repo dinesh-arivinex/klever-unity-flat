@@ -435,8 +435,25 @@ public class AnnotationManager : MonoBehaviour
         newcubeButton.AddComponent<LookAt>();
 
         Canvas canvas = newcubeButton.GetComponentInChildren<Canvas>();
-        canvas.worldCamera = Camera.main;
-        Button[] buttons = canvas.GetComponentsInChildren<Button>();
+        if (canvas != null) {
+            GameObject wrapper = new GameObject("UIWrapper");
+            RectTransform wrapperRect = wrapper.AddComponent<RectTransform>();
+            wrapperRect.SetParent(canvas.transform, false);
+            
+            Transform[] children = new Transform[canvas.transform.childCount];
+            for (int i = 0; i < canvas.transform.childCount; i++) {
+                children[i] = canvas.transform.GetChild(i);
+            }
+            foreach (Transform t in children) {
+                if (t != wrapperRect) {
+                    t.SetParent(wrapperRect, false);
+                }
+            }
+
+            UIFollowTarget follow = wrapper.AddComponent<UIFollowTarget>();
+            follow.target = newcubeButton.transform;
+        }
+        Button[] buttons = newcubeButton.GetComponentsInChildren<Button>();
         Transform canvasChild = cubeButton.transform.GetChild(0);
         // InteractableUnityEventWrapper[] interactableWrappers = canvas.GetComponentsInChildren<InteractableUnityEventWrapper>();
 
