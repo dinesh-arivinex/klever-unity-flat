@@ -168,11 +168,10 @@ public class DeviceSynHandler : MonoBehaviour
 
     private void HandleSessionControl(JSONNode payload)
     {
-        UnityEngine.Debug.Log($"[DeviceSynHandler] HandleSessionControl called with payload: {payload.ToString()}");
+        UnityEngine.Debug.Log($"[DeviceSynHandler] HandleSessionControl called with payload: {(payload != null ? payload.ToString() : "null")}");
         if (payload == null || payload.Count == 0)
         {
-            UnityEngine.Debug.LogWarning("[DeviceSynHandler] HandleSessionControl: Payload empty/null. Reloading scene...");
-            if (!isLobby) LoadScene();
+            UnityEngine.Debug.LogWarning("[DeviceSynHandler] HandleSessionControl: Payload empty/null. Ignoring.");
             return;
         }
         bool isStart = payload["isStart"].AsBool;
