@@ -863,15 +863,18 @@ public class QuizManagers : MonoBehaviour
             liveResponse["selectedIndex"] = selectedAnswerIndex;
             liveResponse["selectedText"] = selectedAnswerIndex >= 0 && selectedAnswerIndex < answers.Count ? answers[selectedAnswerIndex].text : string.Empty;
             Klass.Net.LiveViewPublisher.Instance?.PublishAssessmentInteraction(currentQuestionIndex, liveResponse, false);
-            Button clickedButton = answerButtons[selectedAnswerIndex];
             // Create colors with adjusted alpha values
             Color greenWithAlpha = new Color(Color.green.r, Color.green.g, Color.green.b, 95f / 255f);
             Color redWithAlpha = new Color(Color.red.r, Color.red.g, Color.red.b, 255f / 255f);
-            // Change button color immediately for the correct answer button
-            int correctAnswerIndex = answers.FindIndex(answers => answers.isCorrect);
-            ChangeButtonColor(answerButtons[correctAnswerIndex], greenWithAlpha);
-            // Change button color immediately for the clicked button
-            ChangeButtonColor(clickedButton, answers[selectedAnswerIndex].isCorrect ? greenWithAlpha : redWithAlpha);
+            
+            // Change button color immediately for all active buttons
+            for (int i = 0; i < answers.Count; i++)
+            {
+                if (answerButtons[i] != null && answerButtons[i].gameObject.activeSelf)
+                {
+                    ChangeButtonColor(answerButtons[i], answers[i].isCorrect ? greenWithAlpha : redWithAlpha);
+                }
+            }
             if (answers[selectedAnswerIndex].isCorrect)
             {
                 // MCQstudetScore++;
