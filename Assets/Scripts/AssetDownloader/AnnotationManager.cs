@@ -67,6 +67,7 @@ public class AnnotationManager : MonoBehaviour
     public float position;
     public Button buttonPrefab;
     public GameObject cubeButton;
+    public GameObject annotationStartPoint;
     public Transform target;
     private string downlodedModelName;
     public TextMeshProUGUI displayText;
@@ -420,6 +421,12 @@ public class AnnotationManager : MonoBehaviour
         emptyObject.tag = "notAChild";
         emptyObject.transform.SetParent(model.transform.GetChild(0));
         emptyObject.transform.localPosition = annotationPosition;
+
+        if (annotationStartPoint != null)
+        {
+            GameObject startPointInstance = Instantiate(annotationStartPoint, emptyObject.transform);
+            startPointInstance.transform.localPosition = Vector3.zero;
+        }
         GameObject sourse = new GameObject("Sourse");
         Transform child = model.transform.GetChild(0);
         sourse.transform.SetParent(child.transform.GetChild(0));

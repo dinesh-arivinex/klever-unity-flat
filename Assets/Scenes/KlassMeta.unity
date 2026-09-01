@@ -10371,6 +10371,7 @@ MonoBehaviour:
   position: 3
   buttonPrefab: {fileID: 3808109690332124340, guid: 3be6be85ec07f9749930436801e7df60, type: 3}
   cubeButton: {fileID: 9052812842416660783, guid: 7290b3891c790ea4a90d1e6fe996620c, type: 3}
+  annotationStartPoint: {fileID: 6072219750871120569, guid: d6f37bd6f5a40274d93560f98bcc1421, type: 3}
   target: {fileID: 1294011339}
   displayText: {fileID: 718675962}
   description: {fileID: 1188563339}
@@ -20406,6 +20407,10 @@ PrefabInstance:
     - target: {fileID: 7859269660719174001, guid: 75ba2e57e765ee642a9d87c475f56149, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8932187260763530984, guid: 75ba2e57e765ee642a9d87c475f56149, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
