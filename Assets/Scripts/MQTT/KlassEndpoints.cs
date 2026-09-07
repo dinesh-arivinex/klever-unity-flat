@@ -56,8 +56,8 @@ namespace Klass.Net
     {
         // Production remains the safe default. Development builds can opt in with    //https://api.klever-edu.com
         // the KLEVER_DEVELOPMENT scripting define or with the PlayerPrefs overrides. //api.klever-edu.com
-        private const string ProductionBackendBase = "https://api.klever-edu.com";
-        private const string ProductionMqttHost = "api.klever-edu.com";
+        private const string ProductionBackendBase = "http://44.222.108.144";
+        private const string ProductionMqttHost = "44.222.108.144";
         private const string DevelopmentBackendBase = "http://44.222.108.144";
         private const string DevelopmentMqttHost = "44.222.108.144";
 
