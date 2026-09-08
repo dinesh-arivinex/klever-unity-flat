@@ -391,6 +391,7 @@ public class GamificationManager : MonoBehaviour
     }
     public void CallingThankYouCanvas()
     {
+        Klass.Net.LiveViewPublisher.Instance?.PublishAssessmentCompleted();
         foreach (GameObject item in disableObjects)
         {
             item.SetActive(false);

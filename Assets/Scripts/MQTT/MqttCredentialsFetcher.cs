@@ -128,8 +128,15 @@ namespace Klass.Net
                 if (KlassEndpoints.BackendBase.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
                     brokerUri.Scheme != "wss")
                 {
-                    onFailure?.Invoke("brokerWsUrl must use wss for an HTTPS WebGL build");
-                    yield break;
+                    if (brokerUri.Scheme == "ws")
+                    {
+                        c.BrokerWsUrl = "wss://" + c.BrokerWsUrl.Substring("ws://".Length);
+                    }
+                    else
+                    {
+                        onFailure?.Invoke("brokerWsUrl must use wss for an HTTPS WebGL build");
+                        yield break;
+                    }
                 }
 #else
                 if (!Uri.TryCreate(c.BrokerTcpUrl, UriKind.Absolute, out var brokerUri) ||

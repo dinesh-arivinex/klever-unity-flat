@@ -48,7 +48,7 @@ public class DeepLinkManager : MonoBehaviour
             // and the API has already loaded the experience
             if (GameManager.Instance != null && GameManager.Instance.api != null && GameManager.Instance.api.isLoadedResponse)
             {
-                //ResumeExperience();
+                ResumeExperience();
             }
         }
     }
@@ -56,6 +56,8 @@ public class DeepLinkManager : MonoBehaviour
     public static void ResumeExperience()
     {
         isResumingFromDeepLink = false;
+        PlayerPrefs.SetInt("InSimulation", 0);
+        PlayerPrefs.Save();
 
         if (GameManager.Instance != null && GameManager.Instance.api != null)
         {

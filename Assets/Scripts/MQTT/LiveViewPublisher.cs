@@ -89,6 +89,12 @@ namespace Klass.Net
             delta["response"] = response ?? new JSONNull(); delta["submitted"] = submitted; PublishEvent(delta);
         }
 
+        public void PublishAssessmentCompleted()
+        {
+            var details = new JSONObject(); details["message"] = "Assessment completed";
+            ShowContent("completion", "assessment-complete", string.Empty, details);
+        }
+
         private JSONObject Envelope(string eventType)
         {
             var node = new JSONObject(); node["schemaVersion"] = SchemaVersion; node["eventType"] = eventType; node["experienceId"] = _experienceId;

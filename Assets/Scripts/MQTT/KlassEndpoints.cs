@@ -54,10 +54,10 @@ namespace Klass.Net
     /// </summary>
     public static class KlassEndpoints
     {
-        // Production remains the safe default. Development builds can opt in with    //https://api.klever-edu.com
-        // the KLEVER_DEVELOPMENT scripting define or with the PlayerPrefs overrides. //api.klever-edu.com
-        private const string ProductionBackendBase = "http://44.222.108.144";
-        private const string ProductionMqttHost = "44.222.108.144";
+        // Production remains the safe default. Development builds can opt in with
+        // the KLEVER_DEVELOPMENT scripting define or with the PlayerPrefs overrides.
+        private const string ProductionBackendBase = "https://api.klever-edu.com";
+        private const string ProductionMqttHost = "api.klever-edu.com";
         private const string DevelopmentBackendBase = "http://44.222.108.144";
         private const string DevelopmentMqttHost = "44.222.108.144";
 
@@ -76,13 +76,29 @@ namespace Klass.Net
             get
             {
                 var configured = PlayerPrefs.GetString("klass.backend_base_url", string.Empty);
-                if (!string.IsNullOrWhiteSpace(configured)) return configured.Trim().TrimEnd('/');
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-                // A WebGL build served by the development frontend must use that
-                // same origin for device registration and MQTT credentials. This
-                // prevents a dev player from silently registering against production.
-                if (Uri.TryCreate(Application.absoluteURL, UriKind.Absolute, out var pageUri))
+                bool isHttpsPage = Uri.TryCreate(Application.absoluteURL, UriKind.Absolute, out var pageUri) &&
+                                   pageUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+
+                if (!string.IsNullOrWhiteSpace(configured))
+                {
+                    configured = configured.Trim().TrimEnd('/');
+                    if (isHttpsPage && configured.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (configured.IndexOf("api.klever-edu.com", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            return "https://" + configured.Substring("http://".Length);
+                        }
+                        Debug.LogWarning($"[KlassEndpoints] Insecure backend URL '{configured}' ignored on HTTPS WebGL page to prevent Mixed Content blocking.");
+                    }
+                    else
+                    {
+                        return configured;
+                    }
+                }
+
+                if (pageUri != null)
                 {
                     if (pageUri.Host.Equals(DevelopmentMqttHost, StringComparison.OrdinalIgnoreCase))
                         return pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
@@ -90,7 +106,14 @@ namespace Klass.Net
                     // Unity's Build And Run uses a localhost static server which
                     // does not proxy /v1. Send those builds to the development API.
                     if (IsLocalHost(pageUri.Host)) return DevelopmentBackendBase;
+
+                    if (isHttpsPage && DefaultBackendBase.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ProductionBackendBase;
+                    }
                 }
+#else
+                if (!string.IsNullOrWhiteSpace(configured)) return configured.Trim().TrimEnd('/');
 #endif
                 return DefaultBackendBase;
             }
