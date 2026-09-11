@@ -100,17 +100,14 @@ namespace Klass.Net
 
                 if (pageUri != null)
                 {
-                    if (pageUri.Host.Equals(DevelopmentMqttHost, StringComparison.OrdinalIgnoreCase))
-                        return pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
-
                     // Unity's Build And Run uses a localhost static server which
                     // does not proxy /v1. Send those builds to the development API.
                     if (IsLocalHost(pageUri.Host)) return DevelopmentBackendBase;
 
-                    if (isHttpsPage && DefaultBackendBase.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return ProductionBackendBase;
-                    }
+                    // Browser builds use the hosting origin and its /v1 reverse
+                    // proxy. This avoids cross-origin TLS/CORS failures and keeps
+                    // certificate validation under the browser's security model.
+                    return pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
                 }
 #else
                 if (!string.IsNullOrWhiteSpace(configured)) return configured.Trim().TrimEnd('/');

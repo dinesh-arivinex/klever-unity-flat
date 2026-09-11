@@ -69,7 +69,6 @@ public class DeviceIDManager : MonoBehaviour
                                                                              //and transmits that data verbatim as HTTP request body data.
         req.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        req.certificateHandler = new BypassCertificateHandler();
         //Send the request then wait here until it returns
         yield return req.SendWebRequest();
         if (req.result != UnityWebRequest.Result.Success)
@@ -143,15 +142,6 @@ public class DeviceIDManager : MonoBehaviour
       StartCoroutine(WebPostResponse(Klass.Net.KlassEndpoints.V1("devices"), mydate));
 
     }
-    public class BypassCertificateHandler : CertificateHandler
-    {
-        protected override bool ValidateCertificate(byte[] certificateData)
-        {
-            // Always accept
-            return true;
-        }
-    }
-
     private static void DisableVrInteractionRays()
     {
         GamificationControllerHandSwitcher switcher = GamificationControllerHandSwitcher.Instance;

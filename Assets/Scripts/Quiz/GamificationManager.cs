@@ -379,10 +379,9 @@ public class GamificationManager : MonoBehaviour
         req.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
-        req.certificateHandler = new BypassCertificateHandler();
         //Send the request then wait here until it returns
         yield return req.SendWebRequest();
-        if (req.isNetworkError) // error in request
+        if (req.result != UnityWebRequest.Result.Success)
         {
             DebugUtil.Log("Error While Sending: " + req.error);
         }
@@ -519,9 +518,6 @@ public class GamificationManager : MonoBehaviour
         request.SetRequestHeader("Content-Type", "application/json");
         request.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
         //  request.SetRequestHeader("Authorization", $"Bearer {bearerToken}");
-
-        // Use the custom CertificateHandler to bypass certificate validation (for development purposes only)
-        request.certificateHandler = new BypassCertificateHandler();
 
         // Send the request and await a response
         yield return request.SendWebRequest();

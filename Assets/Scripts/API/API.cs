@@ -99,24 +99,46 @@ public class API : MonoBehaviour
         string jsonData;
         var req = new UnityWebRequest(apireq, "GET");
         req.downloadHandler = new DownloadHandlerBuffer();
+        req.timeout = 30;
         req.SetRequestHeader("Content-Type", "application/json");
 
         // Set device authentication header
         req.SetRequestHeader("device-id", Klass.Net.KlassDeviceIdentity.Value);
         UnityEngine.Debug.Log($"[API] Querying experience API: {apireq} with device-id header: {Klass.Net.KlassDeviceIdentity.Value}");
 
-        req.certificateHandler = new BypassCertificateHandler();
-        yield return req.Send();
+        yield return req.SendWebRequest();
 
-        if (req.isNetworkError) // error in request
+        if (req.result != UnityWebRequest.Result.Success)
         {
-            UnityEngine.Debug.LogError($"[API] WebGetRequest network error: {req.error}");
+            var failureKind = req.result == UnityWebRequest.Result.ProtocolError
+                ? $"HTTP {req.responseCode}"
+                : "network/TLS";
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (req.result == UnityWebRequest.Result.ConnectionError &&
+                Uri.TryCreate(Application.absoluteURL, UriKind.Absolute, out var pageUri) &&
+                Uri.TryCreate(apireq, UriKind.Absolute, out var requestUri) &&
+                !pageUri.Host.Equals(requestUri.Host, StringComparison.OrdinalIgnoreCase))
+            {
+                var sameOriginApi = pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/') + requestUri.PathAndQuery;
+                UnityEngine.Debug.LogWarning($"[API] Cross-origin TLS failed for {requestUri.Host}; retrying through hosting origin: {sameOriginApi}");
+                PlayerPrefs.SetString("klass.backend_base_url", pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/'));
+                PlayerPrefs.Save();
+                req.Dispose();
+                yield return WebGetRequest(sameOriginApi);
+                yield break;
+            }
+#endif
+
+            UnityEngine.Debug.LogError($"[API] WebGetRequest {failureKind} error for {apireq}: {req.error}");
             // Report download failure to teacher dashboard via MQTT.
             var synHandler = FindObjectOfType<DeviceSynHandler>();
             if (synHandler != null)
-                synHandler.PublishDownloadError("Network error: " + req.error);
+                synHandler.PublishDownloadError($"Experience API {failureKind} error: {req.error}");
+            req.Dispose();
+            yield break;
         }
-        else
+
         {
             jsonData = req.downloadHandler.text;
             UnityEngine.Debug.Log($"[API] WebGetRequest response code: {req.responseCode}, raw payload: {jsonData}");
@@ -173,6 +195,7 @@ public class API : MonoBehaviour
                         var synHandler = FindObjectOfType<DeviceSynHandler>();
                         if (synHandler != null)
                             synHandler.PublishDownloadError("Empty experience response from server");
+                        req.Dispose();
                         yield break;
                     }
 
@@ -230,6 +253,7 @@ public class API : MonoBehaviour
                         var synHandler2 = FindObjectOfType<DeviceSynHandler>();
                         if (synHandler2 != null)
                             synHandler2.PublishDownloadError("Experience has no content");
+                        req.Dispose();
                         yield break;
                     }
 
@@ -501,8 +525,7 @@ public class API : MonoBehaviour
 
             }
         }
-
-
+        req.Dispose();
     }
 
 
@@ -597,12 +620,4 @@ public class API : MonoBehaviour
 
     }
 
-}
-public class BypassCertificateHandler : CertificateHandler
-{
-    protected override bool ValidateCertificate(byte[] certificateData)
-    {
-        // Always accept
-        return true;
-    }
 }
