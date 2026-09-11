@@ -200,7 +200,9 @@ namespace Klass.Net
         public void PublishTelemetry(JSONObject node)
         {
             if (!IsConnected) return;
-            PublishJson(MqttTopics.Telemetry(SchoolId, DeviceId), node, retain: false, qos: 0);
+            // Learning events must survive transient packet loss. Event IDs make
+            // QoS 1 redelivery safe because the backend stores them idempotently.
+            PublishJson(MqttTopics.Telemetry(SchoolId, DeviceId), node, retain: false, qos: 1);
         }
 
         public void PublishLiveViewState(JSONObject node)

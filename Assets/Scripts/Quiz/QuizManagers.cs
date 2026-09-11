@@ -862,6 +862,8 @@ public class QuizManagers : MonoBehaviour
             var liveResponse = new SimpleJSON.JSONObject();
             liveResponse["selectedIndex"] = selectedAnswerIndex;
             liveResponse["selectedText"] = selectedAnswerIndex >= 0 && selectedAnswerIndex < answers.Count ? answers[selectedAnswerIndex].text : string.Empty;
+            liveResponse["selectedOptionId"] = selectedAnswerIndex >= 0 && selectedAnswerIndex < answers.Count ? answers[selectedAnswerIndex]._id : string.Empty;
+            liveResponse["isCorrect"] = selectedAnswerIndex >= 0 && selectedAnswerIndex < answers.Count && answers[selectedAnswerIndex].isCorrect;
             Klass.Net.LiveViewPublisher.Instance?.PublishAssessmentInteraction(currentQuestionIndex, liveResponse, false);
             // Create colors with adjusted alpha values
             Color greenWithAlpha = new Color(Color.green.r, Color.green.g, Color.green.b, 95f / 255f);
