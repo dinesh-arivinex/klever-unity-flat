@@ -36,6 +36,9 @@ public class GamificationManager : MonoBehaviour
         public string sectionID;
         public string gradeID;
         public int score;
+        public int totalQuestions;
+        public int answeredQuestions;
+        public int correctAnswers;
 
     }
     public class DeviceStatus
@@ -330,6 +333,9 @@ public class GamificationManager : MonoBehaviour
             sectionID = sectionID,
             gradeID = gradeID,
             score = arrowScore + basketBallScore + mcqScore,
+            totalQuestions = currentGameName == "MatchingFollowing" ? 5 : allOptions.Count,
+            answeredQuestions = currentGameName == "MatchingFollowing" ? 5 : allOptions.Count,
+            correctAnswers = arrowScore + basketBallScore + mcqScore,
             // optional, defaults to 60
         };
         string jsonData = JsonUtility.ToJson(student);
