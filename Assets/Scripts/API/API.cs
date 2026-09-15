@@ -108,7 +108,7 @@ public class API : MonoBehaviour
 
         yield return req.SendWebRequest();
 
-        if (req.result != UnityWebRequest.Result.Success)
+        if (req.result != UnityWebRequest.Result.Success && req.responseCode != 401)
         {
             var failureKind = req.result == UnityWebRequest.Result.ProtocolError
                 ? $"HTTP {req.responseCode}"
@@ -200,6 +200,11 @@ public class API : MonoBehaviour
                     }
 
                     isLoadedResponse = true;
+                    var synHandlerMQTT = GameManager.Instance.deviceSynHandler != null ? GameManager.Instance.deviceSynHandler : FindObjectOfType<DeviceSynHandler>();
+                    if (synHandlerMQTT != null)
+                    {
+                        synHandlerMQTT.BootMqtt();
+                    }
                     DeviceIDManager deviceIDManager = DeviceID.GetComponent<DeviceIDManager>();
                     deviceIDManager.ToggleFunction(true);
                     deviceIDManager.gameObject.SetActive(false);

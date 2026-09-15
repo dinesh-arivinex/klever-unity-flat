@@ -89,7 +89,6 @@ public class DeviceSynHandler : MonoBehaviour
         isActiveDevice = false;
         isOpenWelcomeScreen = true;
         isGameOver = false;
-        BootMqtt();
     }
 
     void OnDestroy()
@@ -137,7 +136,7 @@ public class DeviceSynHandler : MonoBehaviour
 #endif
     }
 
-    private void BootMqtt()
+    public void BootMqtt()
     {
         if (_mqttBooted) return;
         _mqttBooted = true;
