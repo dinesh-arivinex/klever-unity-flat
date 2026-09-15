@@ -31,14 +31,7 @@ namespace Klass.Net
     {
         public static KlassMqttClient Instance { get; private set; }
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void Bootstrap()
-        {
-            if (Instance != null) return;
-            var go = new GameObject("[KlassMqttClient]");
-            var mqtt = go.AddComponent<KlassMqttClient>();
-            mqtt.Begin();
-        }
+
 
         [Header("Tuning")]
         public float reconnectInitialSeconds = 2f;
@@ -280,7 +273,18 @@ namespace Klass.Net
                     c => { _creds = c; ok = true; done = true; },
                     e => { err = e; done = true; });
                 if (!done) yield break;
-                if (!ok) { Debug.LogWarning($"[KlassMqtt] credential fetch failed: {err}"); yield break; }
+                if (!ok) 
+                { 
+                    if (err != null && err.Contains("HTTP 401") && err.Contains("Device not found"))
+                    {
+                        Debug.Log("[KlassMqtt] Device not yet registered. Waiting for registration UI to complete before reconnecting...");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[KlassMqtt] credential fetch failed: {err}"); 
+                    }
+                    yield break; 
+                }
                 SchoolId = _creds.SchoolId;
                 DeviceId = _creds.DeviceId;
             }
