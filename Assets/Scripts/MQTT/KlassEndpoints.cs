@@ -104,6 +104,14 @@ namespace Klass.Net
                     // does not proxy /v1. Send those builds to the development API.
                     if (IsLocalHost(pageUri.Host)) return DevelopmentBackendBase;
 
+                    // If the page is hosted on webview.klever-edu.com or any klever-edu.com domain,
+                    // route API calls to the dedicated production backend API (https://api.klever-edu.com)
+                    // which supports CORS from webview.klever-edu.com.
+                    if (pageUri.Host.EndsWith("klever-edu.com", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ProductionBackendBase;
+                    }
+
                     // Browser builds use the hosting origin and its /v1 reverse
                     // proxy. This avoids cross-origin TLS/CORS failures and keeps
                     // certificate validation under the browser's security model.

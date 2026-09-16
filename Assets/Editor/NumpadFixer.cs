@@ -57,4 +57,29 @@ public class NumpadFixer
 
         Debug.Log($"Numpad Fixed Successfully! Removed {missingRemovedCount} missing/unwanted scripts and added {buttonAddedCount} standard UI Buttons to the children.");
     }
+
+    [MenuItem("Tools/Clean All Missing Scripts In Active Scene")]
+    public static void CleanAllMissingScriptsInScene()
+    {
+        var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        GameObject[] rootObjects = activeScene.GetRootGameObjects();
+        int totalRemoved = 0;
+
+        foreach (GameObject root in rootObjects)
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(child.gameObject);
+                if (removed > 0)
+                {
+                    totalRemoved += removed;
+                    Debug.Log($"Removed {removed} missing scripts from: {child.name}");
+                }
+            }
+        }
+
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(activeScene);
+        Debug.Log($"Finished cleaning scene '{activeScene.name}'! Removed a total of {totalRemoved} missing scripts.");
+    }
 }
+
