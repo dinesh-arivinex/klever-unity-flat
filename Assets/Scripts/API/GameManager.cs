@@ -9,7 +9,6 @@ public class GameManager : MonoBehaviour
 
     [Header("Script Ref")]
     public ChangeClassRoom changeClassRoom;
-    public WebManager webManager;
     public ThreesixtyImageManager threesixtyImageManager;
     public AssetDownloader assetDownloader;
     public ClassVrManager vrManager;
