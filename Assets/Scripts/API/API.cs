@@ -303,7 +303,8 @@ public class API : MonoBehaviour
                         }
                         else if (objectXRDetails != null && objectXRDetails.Count > 0)
                         {
-                            selectedSimulationDetails = objectXRDetails;
+                            // Skip objectXR simulation
+                            selectedSimulationDetails = null;
                         }
 
                         if (selectedSimulationDetails != null)
