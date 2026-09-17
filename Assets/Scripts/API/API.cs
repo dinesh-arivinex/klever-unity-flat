@@ -114,21 +114,7 @@ public class API : MonoBehaviour
                 ? $"HTTP {req.responseCode}"
                 : "network/TLS";
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-            if (req.result == UnityWebRequest.Result.ConnectionError &&
-                Uri.TryCreate(Application.absoluteURL, UriKind.Absolute, out var pageUri) &&
-                Uri.TryCreate(apireq, UriKind.Absolute, out var requestUri) &&
-                !pageUri.Host.Equals(requestUri.Host, StringComparison.OrdinalIgnoreCase))
-            {
-                var sameOriginApi = pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/') + requestUri.PathAndQuery;
-                UnityEngine.Debug.LogWarning($"[API] Cross-origin TLS failed for {requestUri.Host}; retrying through hosting origin: {sameOriginApi}");
-                PlayerPrefs.SetString("klass.backend_base_url", pageUri.GetLeftPart(UriPartial.Authority).TrimEnd('/'));
-                PlayerPrefs.Save();
-                req.Dispose();
-                yield return WebGetRequest(sameOriginApi);
-                yield break;
-            }
-#endif
+
 
             UnityEngine.Debug.LogError($"[API] WebGetRequest {failureKind} error for {apireq}: {req.error}");
             // Report download failure to teacher dashboard via MQTT.

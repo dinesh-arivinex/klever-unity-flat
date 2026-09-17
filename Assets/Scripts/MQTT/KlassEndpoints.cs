@@ -56,10 +56,10 @@ namespace Klass.Net
     {
         // Production remains the safe default. Development builds can opt in with
         // the KLEVER_DEVELOPMENT scripting define or with the PlayerPrefs overrides.
-        private const string ProductionBackendBase = "http://44.222.108.144";
-        private const string ProductionMqttHost = "44.222.108.144";
-        private const string DevelopmentBackendBase = "http://44.222.108.144";
-        private const string DevelopmentMqttHost = "44.222.108.144";
+        private const string ProductionBackendBase = "https://api.klever-edu.com";
+        private const string ProductionMqttHost = "api.klever-edu.com";
+        private const string DevelopmentBackendBase = "https://api.klever-edu.com";
+        private const string DevelopmentMqttHost = "api.klever-edu.com";
 
 #if KLEVER_DEVELOPMENT
         private const string DefaultBackendBase = DevelopmentBackendBase;
@@ -84,7 +84,15 @@ namespace Klass.Net
                 if (!string.IsNullOrWhiteSpace(configured))
                 {
                     configured = configured.Trim().TrimEnd('/');
-                    if (isHttpsPage && configured.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+
+                    // Never allow the static S3 webview hosting origin to be used as the backend API
+                    if (configured.IndexOf("webview.klever-edu.com", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        PlayerPrefs.DeleteKey("klass.backend_base_url");
+                        PlayerPrefs.Save();
+                        configured = string.Empty;
+                    }
+                    else if (isHttpsPage && configured.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                     {
                         if (configured.IndexOf("api.klever-edu.com", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
