@@ -51,8 +51,6 @@ public class ChangeClassRoom : MonoBehaviour
     public Transform boardUI;
     public Transform boardUIPosA, boardUIPosB, boardUIPosC;
 
-    //Simulation position according to the classroom
-    public WebManager webManager;
     public GameObject classRoomASimulPos, classRoomBSimulPos, classRoomCSimulPos;
 
     //Gamification Position according to the classroom

@@ -60,7 +60,6 @@ public class API : MonoBehaviour
     private AssetDownloader assetDownloader;
     private bool isThreeSixty;
     private ThreesixtyImageManager threesixtyImageManager;
-    private WebManager webManager;
     private ChangeClassRoom room;
     private string youtubeUrlTest;
     //private YoutubeTestManager youtubeTestManager;
@@ -79,7 +78,6 @@ public class API : MonoBehaviour
         addingImage = GameManager.Instance.addingImage;
         serviceScript = GameManager.Instance.serviceScript;
         videoManager = GameManager.Instance.videoManager;
-        webManager = GameManager.Instance.webManager;
 
         CallingClassVrExperiance();
     }
@@ -297,18 +295,16 @@ public class API : MonoBehaviour
 
                         if (simulationDetails != null && simulationDetails.Count > 0)
                         {
-                            webManager.isobjectXR = false;
                             selectedSimulationDetails = simulationDetails;
                         }
                         else if (scholarLabSimulationDetails != null && scholarLabSimulationDetails.Count > 0)
                         {
-                            webManager.isobjectXR = false;
                             selectedSimulationDetails = scholarLabSimulationDetails;
                         }
                         else if (objectXRDetails != null && objectXRDetails.Count > 0)
                         {
-                            webManager.isobjectXR = true;
-                            selectedSimulationDetails = objectXRDetails;
+                            // Skip objectXR simulation
+                            selectedSimulationDetails = null;
                         }
 
                         if (selectedSimulationDetails != null)

@@ -44,7 +44,6 @@ public class ServiceScript : MonoBehaviour
     private API api;
     private ClassVrManager classVrManager;
     private DeviceSynHandler deviceSynHandler;
-    private WebManager webManager;
 
 
     private RuntimeImportBehaviourHelper runtimeImportBehaviourHelper;
@@ -69,7 +68,6 @@ public class ServiceScript : MonoBehaviour
 
     public void FindReferance()
     {
-        webManager= GameManager.Instance.webManager;
         deviceSynHandler = GameManager.Instance.deviceSynHandler;
         api = GameManager.Instance.api;
        // loadingBar =FindAnyObjectByType<LoadingBar>();

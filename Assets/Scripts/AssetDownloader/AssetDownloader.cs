@@ -43,12 +43,10 @@ public class AssetDownloader : MonoBehaviour
     private List<float> modelTimer=new List<float>();
     private List<float> thresholds ;
     private float currentTimerIndex;
-    private WebManager webManager;
     public TextMeshProUGUI text;
 
     private void Start()
     {
-        webManager = GameManager.Instance.webManager;
         annotationManager = GameManager.Instance.annotationManager;
         googleTextToSpeech = GameManager.Instance.googleTextToSpeech;
     }

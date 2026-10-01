@@ -11,7 +11,6 @@ public class ThreesixtyImageManager : MonoBehaviour
     public Transform targetposition;
     public GameObject[] enableToDisable;
     public GameObject[] DisableElemet;
-    private WebManager webmanager;
     private API api;
 
     private GoogleTextToSpeech googleTextToSpeech;
@@ -27,7 +26,6 @@ public class ThreesixtyImageManager : MonoBehaviour
         gamificationManager = GameManager.Instance.gamificationManager;
         serviceScript = GameManager.Instance.serviceScript;
         googleTextToSpeech = GameManager.Instance.googleTextToSpeech;
-        webmanager = GameManager.Instance.webManager;
         api = GameManager.Instance.api;
 
     }
