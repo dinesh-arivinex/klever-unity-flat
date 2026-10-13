@@ -70,6 +70,10 @@ public class DeviceSynHandler : MonoBehaviour
     private bool isFirstTime;
     private bool isLobby = true;
     private bool _isPaused;
+    public static bool IsGamePaused { get; private set; } = false;
+    [Header("Pause UI")]
+    public GameObject pauseOverlay;
+    private static GameObject _runtimePauseOverlay;
 
     private bool _mqttBooted;
     private string _lastPublishedFingerprint;
@@ -132,6 +136,23 @@ public class DeviceSynHandler : MonoBehaviour
             mockPayload["isStop"] = true;
             mockPayload["experienceId"] = "simulated_id";
             HandleSessionControl(mockPayload);
+        }
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            if (!_isPaused)
+            {
+                UnityEngine.Debug.Log("[DeviceSynHandler] Simulated manual Pause command via keyboard 'P'.");
+                _isPaused = true;
+                PublishStateIfChanged(force: true);
+                PauseVR();
+            }
+            else
+            {
+                UnityEngine.Debug.Log("[DeviceSynHandler] Simulated manual Resume command via keyboard 'P'.");
+                _isPaused = false;
+                PublishStateIfChanged(force: true);
+                ResumeVR();
+            }
         }
 #endif
     }
@@ -347,9 +368,27 @@ public class DeviceSynHandler : MonoBehaviour
 
     private void PauseVR()
     {
+        _isPaused = true;
+        IsGamePaused = true;
         Time.timeScale = 0f;
         AudioListener.pause = true;
 
+        // 1. Disable Unity EventSystem to block all UI clicks, buttons, and pointer events
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.enabled = false;
+        }
+
+        // 2. Disable Web Camera look/drag controls
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.EnableController(false);
+        }
+
+        // 3. Show full-screen raycast blocker & pause overlay
+        ShowPauseOverlay();
+
+        // 4. Pause Video playback
         if (VideoManager.Instance != null)
         {
             if (VideoManager.Instance.mediaPlayer != null && VideoManager.Instance.mediaPlayer.Control != null)
@@ -369,13 +408,42 @@ public class DeviceSynHandler : MonoBehaviour
                 }
             }
         }
+
+        // 5. Pause WebGL TTS Audio
+        if (GameManager.Instance != null && GameManager.Instance.googleTextToSpeech != null)
+        {
+            GameManager.Instance.googleTextToSpeech.PauseAudio();
+        }
+        else
+        {
+            var tts = FindObjectOfType<GoogleTextToSpeech>();
+            if (tts != null) tts.PauseAudio();
+        }
     }
 
     private void ResumeVR()
     {
+        _isPaused = false;
+        IsGamePaused = false;
         Time.timeScale = 1f;
         AudioListener.pause = false;
 
+        // 1. Re-enable Unity EventSystem
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.enabled = true;
+        }
+
+        // 2. Re-enable Web Camera look/drag controls
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.EnableController(true);
+        }
+
+        // 3. Hide pause overlay
+        HidePauseOverlay();
+
+        // 4. Resume Video playback
         if (VideoManager.Instance != null)
         {
             if (VideoManager.Instance.mediaPlayer != null && VideoManager.Instance.mediaPlayer.Control != null)
@@ -395,7 +463,129 @@ public class DeviceSynHandler : MonoBehaviour
                 }
             }
         }
+
+        // 5. Resume WebGL TTS Audio
+        if (GameManager.Instance != null && GameManager.Instance.googleTextToSpeech != null)
+        {
+            GameManager.Instance.googleTextToSpeech.ResumeAudio();
+        }
+        else
+        {
+            var tts = FindObjectOfType<GoogleTextToSpeech>();
+            if (tts != null) tts.ResumeAudio();
+        }
     }
+
+    private void ShowPauseOverlay()
+    {
+        if (pauseOverlay != null)
+        {
+            pauseOverlay.SetActive(true);
+            return;
+        }
+
+        if (_runtimePauseOverlay == null)
+        {
+            _runtimePauseOverlay = CreateRuntimePauseOverlay();
+        }
+
+        if (_runtimePauseOverlay != null)
+        {
+            _runtimePauseOverlay.SetActive(true);
+        }
+    }
+
+    private void HidePauseOverlay()
+    {
+        if (pauseOverlay != null)
+        {
+            pauseOverlay.SetActive(false);
+        }
+
+        if (_runtimePauseOverlay != null)
+        {
+            _runtimePauseOverlay.SetActive(false);
+        }
+    }
+
+    private GameObject CreateRuntimePauseOverlay()
+    {
+        try
+        {
+            GameObject canvasGo = new GameObject("Klever_PauseOverlayCanvas");
+            Canvas canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32760;
+
+            UnityEngine.UI.CanvasScaler scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+
+            canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+            // Fullscreen raycast blocker
+            GameObject bgGo = new GameObject("PauseBlockerPanel");
+            bgGo.transform.SetParent(canvasGo.transform, false);
+            UnityEngine.UI.Image bgImg = bgGo.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = new Color(0.02f, 0.04f, 0.08f, 0.78f);
+            bgImg.raycastTarget = true;
+            RectTransform bgRect = bgGo.GetComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.sizeDelta = Vector2.zero;
+
+            // Card container
+            GameObject cardGo = new GameObject("PauseCard");
+            cardGo.transform.SetParent(bgGo.transform, false);
+            RectTransform cardRect = cardGo.AddComponent<RectTransform>();
+            cardRect.sizeDelta = new Vector2(560, 220);
+            cardRect.anchoredPosition = Vector2.zero;
+
+            UnityEngine.UI.Image cardImg = cardGo.AddComponent<UnityEngine.UI.Image>();
+            cardImg.color = new Color(0.10f, 0.13f, 0.20f, 0.96f);
+            cardImg.raycastTarget = true;
+
+            // Title
+            GameObject titleGo = new GameObject("PauseTitle");
+            titleGo.transform.SetParent(cardGo.transform, false);
+            RectTransform titleRect = titleGo.AddComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0f, 0.45f);
+            titleRect.anchorMax = new Vector2(1f, 0.95f);
+            titleRect.sizeDelta = Vector2.zero;
+
+            TextMeshProUGUI titleText = titleGo.AddComponent<TextMeshProUGUI>();
+            titleText.text = "❚❚ SESSION PAUSED";
+            titleText.fontSize = 32;
+            titleText.fontStyle = FontStyles.Bold;
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.color = new Color(1f, 0.85f, 0.3f, 1f);
+            titleText.raycastTarget = false;
+
+            // Subtitle
+            GameObject subGo = new GameObject("PauseSubtitle");
+            subGo.transform.SetParent(cardGo.transform, false);
+            RectTransform subRect = subGo.AddComponent<RectTransform>();
+            subRect.anchorMin = new Vector2(0f, 0.08f);
+            subRect.anchorMax = new Vector2(1f, 0.48f);
+            subRect.sizeDelta = Vector2.zero;
+
+            TextMeshProUGUI subText = subGo.AddComponent<TextMeshProUGUI>();
+            subText.text = "Please wait for your teacher to resume the lesson.";
+            subText.fontSize = 20;
+            subText.alignment = TextAlignmentOptions.Center;
+            subText.color = new Color(0.85f, 0.90f, 0.98f, 0.95f);
+            subText.raycastTarget = false;
+
+            DontDestroyOnLoad(canvasGo);
+            return canvasGo;
+        }
+        catch (System.Exception ex)
+        {
+            UnityEngine.Debug.LogWarning("[DeviceSynHandler] Failed to create runtime pause overlay: " + ex.Message);
+            return null;
+        }
+    }
+
     public void SynDevice()
     {
         isSync = true;
@@ -405,6 +595,17 @@ public class DeviceSynHandler : MonoBehaviour
         // Ensure timeScale and audio are reset when returning to lobby
         Time.timeScale = 1f;
         AudioListener.pause = false;
+        _isPaused = false;
+        IsGamePaused = false;
+        HidePauseOverlay();
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.enabled = true;
+        }
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.EnableController(true);
+        }
         if (isStartButtonPressed) TriggerWelcomeIfReady();
     }
 
@@ -418,6 +619,16 @@ public class DeviceSynHandler : MonoBehaviour
         Time.timeScale = 1f;
         AudioListener.pause = false;
         _isPaused = false;
+        IsGamePaused = false;
+        HidePauseOverlay();
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.enabled = true;
+        }
+        if (WebGLMigration.WebCameraController.Instance != null)
+        {
+            WebGLMigration.WebCameraController.Instance.EnableController(true);
+        }
         isStartButtonPressed = false;
         isOpenGame = false;
         isOpening = false;

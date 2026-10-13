@@ -199,6 +199,7 @@ public class annotation360 : MonoBehaviour
     }
     private void Update()
     {
+        if (DeviceSynHandler.IsGamePaused) return;
         if (Input.GetKeyDown(KeyCode.U))
         {
             SendAllToServer();

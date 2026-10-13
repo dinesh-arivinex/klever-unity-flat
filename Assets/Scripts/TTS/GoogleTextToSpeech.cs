@@ -27,6 +27,12 @@ public class GoogleTextToSpeech : MonoBehaviour
 
     [DllImport("__Internal")]
     private static extern void KleverStopBase64Audio();
+
+    [DllImport("__Internal")]
+    private static extern void KleverPauseBase64Audio();
+
+    [DllImport("__Internal")]
+    private static extern void KleverResumeBase64Audio();
 #endif
    
     public  enum GendeR
@@ -71,10 +77,13 @@ public class GoogleTextToSpeech : MonoBehaviour
 
     void OnEnable()
     {
-        serviceScript = GameManager.Instance.serviceScript;
-         isFirstTime =true;
-     //  SetVoiceNameAndGender(selectedGender);
-        
+        serviceScript = GameManager.Instance != null ? GameManager.Instance.serviceScript : null;
+        isFirstTime = true;
+        if (string.IsNullOrEmpty(voiceName))
+        {
+            voiceName = GetVoiceName(selectedGender);
+            ssmlGender = selectedGender == GendeR.FEMALE ? "FEMALE" : "MALE";
+        }
     }
     public void InitialVideoStatus(GameStatus currentstatus)
     {
@@ -133,19 +142,16 @@ public class GoogleTextToSpeech : MonoBehaviour
     }
     string GetSsmlGender(GendeR gender)
     {
-        if (gender==GendeR.MALE)
+        voiceName = GetVoiceName(gender);
+        if (gender == GendeR.MALE)
         {
-            GetVoiceName(GendeR.MALE);
-            male.SetActive(true);
-            Destroy(feMale);
-           // feMale.SetActive(false);
+            if (male != null) male.SetActive(true);
+            if (feMale != null) Destroy(feMale);
         }
         else
         {
-            feMale.SetActive(true);
-            Destroy(male);
-            //male.SetActive(false);
-            GetVoiceName(GendeR.FEMALE);
+            if (feMale != null) feMale.SetActive(true);
+            if (male != null) Destroy(male);
         }
         return gender == GendeR.FEMALE ? "FEMALE" : "MALE";
     }
@@ -204,6 +210,30 @@ public class GoogleTextToSpeech : MonoBehaviour
         if (audioSource != null && audioSource.isPlaying)
         {
             audioSource.Stop();
+        }
+#endif
+    }
+
+    public void PauseAudio()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        KleverPauseBase64Audio();
+#else
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Pause();
+        }
+#endif
+    }
+
+    public void ResumeAudio()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        KleverResumeBase64Audio();
+#else
+        if (audioSource != null && !audioSource.isPlaying)
+        {
+            audioSource.UnPause();
         }
 #endif
     }
@@ -322,6 +352,7 @@ IEnumerator SendTextToSpeechRequest(string text)
     {
         IsAudioReady = false;
         DebugUtil.LogError("WebGL audio playback failed: " + message);
+        HandlePlaybackCompleted();
     }
 #endif
 

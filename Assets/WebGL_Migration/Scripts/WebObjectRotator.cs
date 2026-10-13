@@ -14,6 +14,11 @@ namespace WebGLMigration
 
         void Update()
         {
+            if (DeviceSynHandler.IsGamePaused)
+            {
+                isDragging = false;
+                return;
+            }
             if (Input.GetMouseButtonDown(0))
             {
                 // Check if we clicked on THIS object

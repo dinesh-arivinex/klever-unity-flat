@@ -197,6 +197,7 @@ public class QuizManagers : MonoBehaviour
 
     private void Update()
     {
+        if (DeviceSynHandler.IsGamePaused) return;
         if (Input.GetKeyDown(KeyCode.H))
         {
             NextButtonClick();

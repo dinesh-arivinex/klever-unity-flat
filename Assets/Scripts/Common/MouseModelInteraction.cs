@@ -17,6 +17,12 @@ public class MouseModelInteraction : MonoBehaviour
 
     void Update()
     {
+        if (DeviceSynHandler.IsGamePaused)
+        {
+            isDragging = false;
+            isPanning = false;
+            return;
+        }
         // Start Interaction
         if (Input.GetMouseButtonDown(0))
         {

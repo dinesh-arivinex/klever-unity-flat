@@ -37,18 +37,71 @@ public class WebGLPostProcessor
     private static void FixIndexHtml(string buildPath)
     {
         string indexPath = Path.Combine(buildPath, "index.html");
-        if (File.Exists(indexPath))
+        if (!File.Exists(indexPath))
         {
-            string html = File.ReadAllText(indexPath);
-            
-            // Fix: Manual synchronization of Unity Application.persistentDataPath via JS_FileSystem_Sync() is deprecated
-            if (!html.Contains("autoSyncPersistentDataPath"))
-            {
-                // Inject autoSyncPersistentDataPath: true into the configuration object
-                html = Regex.Replace(html, @"var\s+config\s*=\s*\{", "var config = {\n        autoSyncPersistentDataPath: true,");
-                File.WriteAllText(indexPath, html);
-                Debug.Log("[WebGLPostProcessor] Injected autoSyncPersistentDataPath = true into index.html to fix deprecation warning.");
+            return;
+        }
+
+        string html = File.ReadAllText(indexPath);
+        bool modified = false;
+
+        // Fix 1: Manual synchronization of Unity Application.persistentDataPath via JS_FileSystem_Sync() is deprecated
+        if (!html.Contains("autoSyncPersistentDataPath"))
+        {
+            html = Regex.Replace(html, @"var\s+config\s*=\s*\{", "var config = {\n        autoSyncPersistentDataPath: true,");
+            modified = true;
+            Debug.Log("[WebGLPostProcessor] Injected autoSyncPersistentDataPath = true into index.html.");
+        }
+
+        // Fix 2: Expose unityInstance globally to window.unityInstance for audio context management and plugins
+        if (!html.Contains("window.unityInstance = unityInstance"))
+        {
+            html = Regex.Replace(
+                html,
+                @"createUnityInstance\(canvas,\s*config,\s*\(progress\)\s*=>\s*\{[\s\S]*?\}\)\.then\(\(unityInstance\)\s*=>\s*\{",
+                match => match.Value + "\n                window.unityInstance = unityInstance;"
+            );
+            modified = true;
+            Debug.Log("[WebGLPostProcessor] Injected window.unityInstance assignment into index.html.");
+        }
+
+        // Fix 3: Inject global user-gesture AudioContext resume listener
+        if (!html.Contains("klever-audio-unlock"))
+        {
+            string unlockScript =
+@"    <script id=""klever-audio-unlock"">
+      (function() {
+        function resumeAllAudio() {
+          try {
+            if (typeof WEBAudio !== 'undefined' && WEBAudio.audioContext && WEBAudio.audioContext.state === 'suspended') {
+              WEBAudio.audioContext.resume();
             }
+            if (window.unityInstance && window.unityInstance.Module && window.unityInstance.Module.WEBAudio && window.unityInstance.Module.WEBAudio.audioContext) {
+              if (window.unityInstance.Module.WEBAudio.audioContext.state === 'suspended') {
+                window.unityInstance.Module.WEBAudio.audioContext.resume();
+              }
+            }
+            if (window.audioContext && window.audioContext.state === 'suspended') {
+              window.audioContext.resume();
+            }
+          } catch(e) {}
+        }
+        var events = ['pointerdown', 'mousedown', 'touchstart', 'touchend', 'keydown'];
+        events.forEach(function(evt) {
+          window.addEventListener(evt, resumeAllAudio, { passive: true });
+          document.addEventListener(evt, resumeAllAudio, { passive: true });
+        });
+      })();
+    </script>
+  </body>";
+            html = html.Replace("</body>", unlockScript);
+            modified = true;
+            Debug.Log("[WebGLPostProcessor] Injected AudioContext resume listener into index.html.");
+        }
+
+        if (modified)
+        {
+            File.WriteAllText(indexPath, html);
         }
     }
 }
