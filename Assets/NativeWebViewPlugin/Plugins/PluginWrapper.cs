@@ -29,6 +29,18 @@ namespace NativeWebView
             platform.BuildWebView(json, onError, onSuccess);
         }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void NWV_SetSessionPaused(int paused);
+#endif
+
+        public static void SetSessionPaused(bool paused)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NWV_SetSessionPaused(paused ? 1 : 0);
+#endif
+        }
+
         public static void CloseWebView()
         {
             platform.CloseWebView();

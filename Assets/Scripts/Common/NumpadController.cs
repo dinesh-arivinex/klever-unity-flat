@@ -140,6 +140,7 @@ public class NumpadController : MonoBehaviour
 
     public void OnNumberClicked(string number)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (Time.unscaledTime - lastGlobalClickTime < 0.3f) return;
         lastGlobalClickTime = Time.unscaledTime;
 
@@ -149,6 +150,7 @@ public class NumpadController : MonoBehaviour
 
     public void OnBackspaceClicked()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (Time.unscaledTime - lastGlobalClickTime < 0.3f) return;
         lastGlobalClickTime = Time.unscaledTime;
 
@@ -161,6 +163,7 @@ public class NumpadController : MonoBehaviour
 
     public void OnEnterClicked()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (Time.unscaledTime - lastGlobalClickTime < 0.3f) return;
         lastGlobalClickTime = Time.unscaledTime;
 

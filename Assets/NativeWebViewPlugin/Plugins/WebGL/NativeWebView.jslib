@@ -8,6 +8,7 @@ mergeInto(LibraryManager.library, {
         callbackTarget: "NativeBridge",
         containerId: "native-webview-plugin-container",
         toolbarId: "native-webview-plugin-toolbar",
+        pauseShieldId: "native-webview-plugin-pause-shield",
         iframeId: "native-webview-plugin-iframe",
         resizeHandlerRegistered: false,
         lastParams: {},
@@ -90,6 +91,54 @@ mergeInto(LibraryManager.library, {
           window.addEventListener("resize", handler);
           window.addEventListener("scroll", handler);
           this.resizeHandlerRegistered = true;
+        },
+
+        applySessionPause: function() {
+          var container = document.getElementById(this.containerId);
+          if (!container) return;
+          var paused = !!window.__nativeWebViewSessionPaused;
+          var iframe = document.getElementById(this.iframeId);
+          var toolbar = document.getElementById(this.toolbarId);
+          // DOM WebViews sit above Unity's canvas. Hide and make their input
+          // inert without unloading the page or resetting simulation state.
+          [iframe, toolbar].forEach(function(element) {
+            if (!element) return;
+            element.inert = paused;
+            element.style.visibility = paused ? "hidden" : "";
+          });
+
+          var shield = document.getElementById(this.pauseShieldId);
+          if (!paused) {
+            if (shield && shield.parentNode) shield.parentNode.removeChild(shield);
+            return;
+          }
+          if (!iframe || container.style.display === "none") return;
+          if (!shield) {
+            shield = document.createElement("div");
+            shield.id = this.pauseShieldId;
+            shield.tabIndex = 0;
+            shield.setAttribute("role", "status");
+            shield.textContent = "SESSION PAUSED — Please wait for your teacher to resume the lesson.";
+            shield.style.position = "absolute";
+            shield.style.inset = "0";
+            shield.style.zIndex = "3";
+            shield.style.pointerEvents = "auto";
+            shield.style.background = "rgba(5, 10, 20, 0.96)";
+            shield.style.color = "white";
+            shield.style.display = "flex";
+            shield.style.alignItems = "center";
+            shield.style.justifyContent = "center";
+            shield.style.textAlign = "center";
+            shield.style.font = "24px sans-serif";
+            shield.onkeydown = function(event) {
+              // Keep keyboard focus outside the embedded document while paused.
+              event.preventDefault();
+              event.stopPropagation();
+            };
+            container.appendChild(shield);
+          }
+          if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+          shield.focus();
         },
 
         hideContainer: function() {
@@ -720,6 +769,7 @@ mergeInto(LibraryManager.library, {
           container.appendChild(iframe);
           this.createToolbar(params, requestedUrl);
           this.applyLayout(params);
+          this.applySessionPause();
 
           var layoutBridge = this;
           window.requestAnimationFrame(function() {
@@ -753,6 +803,13 @@ mergeInto(LibraryManager.library, {
     }
 
     bridge.show(params);
+  },
+
+  NWV_SetSessionPaused: function(paused) {
+    // Remember pauses arriving before the WebView is initialized or shown.
+    window.__nativeWebViewSessionPaused = !!paused;
+    var bridge = window.__nativeWebViewBridge;
+    if (bridge) bridge.applySessionPause();
   },
 
   NWV_CloseWebView: function() {

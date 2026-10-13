@@ -70,6 +70,8 @@ public class DeviceSynHandler : MonoBehaviour
     private bool isFirstTime;
     private bool isLobby = true;
     private bool _isPaused;
+    private readonly System.Collections.Generic.List<UnityEngine.EventSystems.BaseInputModule> _pausedInputModules
+        = new System.Collections.Generic.List<UnityEngine.EventSystems.BaseInputModule>();
     public static bool IsGamePaused { get; private set; } = false;
     [Header("Pause UI")]
     public GameObject pauseOverlay;
@@ -91,6 +93,26 @@ public class DeviceSynHandler : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        ResetPauseState();
+    }
+
+    private void ResetPauseState()
+    {
+        _isPaused = false;
+        IsGamePaused = false;
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
+        HidePauseOverlay();
+        RestoreUIInput();
+        NativeWebView.PluginWrapper.SetSessionPaused(false);
+        EnsureEventSystem.EnsureReady();
+    }
+
+    private void RestoreUIInput()
+    {
+        foreach (var module in _pausedInputModules)
+            if (module != null) module.enabled = true;
+        _pausedInputModules.Clear();
     }
 
     void Start()
@@ -150,15 +172,11 @@ public class DeviceSynHandler : MonoBehaviour
             if (!_isPaused)
             {
                 UnityEngine.Debug.Log("[DeviceSynHandler] Simulated manual Pause command via keyboard 'P'.");
-                _isPaused = true;
-                PublishStateIfChanged(force: true);
                 PauseVR();
             }
             else
             {
                 UnityEngine.Debug.Log("[DeviceSynHandler] Simulated manual Resume command via keyboard 'P'.");
-                _isPaused = false;
-                PublishStateIfChanged(force: true);
                 ResumeVR();
             }
         }
@@ -242,9 +260,7 @@ public class DeviceSynHandler : MonoBehaviour
             isOpenGame = true;
             isSync = false;
             _downloadProgress = 0;
-            _isPaused = false;
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
+            ResetPauseState();
             PublishStateIfChanged(force: true);
 
             // Step 1: Enable the Welcome Scene panel immediately when Start is pressed.
@@ -421,6 +437,7 @@ public class DeviceSynHandler : MonoBehaviour
             IsGamePaused = true;
             Time.timeScale = 0f;
             AudioListener.pause = true;
+            NativeWebView.PluginWrapper.SetSessionPaused(true);
         }
     }
 
@@ -432,6 +449,7 @@ public class DeviceSynHandler : MonoBehaviour
             IsGamePaused = false;
             Time.timeScale = 1f;
             AudioListener.pause = false;
+            NativeWebView.PluginWrapper.SetSessionPaused(false);
         }
     }
 
@@ -444,17 +462,20 @@ public class DeviceSynHandler : MonoBehaviour
         _lastPublishedFingerprint = string.Empty; // force heartbeat republish
         PublishStateIfChanged(force: true);
 
-        // 1. Disable Unity EventSystem to block all UI clicks, buttons, and pointer events
-        if (UnityEngine.EventSystems.EventSystem.current != null)
+        // Keep the EventSystem alive: disabling it clears EventSystem.current
+        // and prevents the old resume path from finding it again.
+        EnsureEventSystem.EnsureReady();
+        foreach (var system in FindObjectsOfType<UnityEngine.EventSystems.EventSystem>())
         {
-            UnityEngine.EventSystems.EventSystem.current.enabled = false;
+            system.SetSelectedGameObject(null);
+            foreach (var module in system.GetComponents<UnityEngine.EventSystems.BaseInputModule>())
+            {
+                if (!module.enabled) continue;
+                _pausedInputModules.Add(module);
+                module.enabled = false;
+            }
         }
-
-        // 2. Disable Web Camera look/drag controls
-        if (WebGLMigration.WebCameraController.Instance != null)
-        {
-            WebGLMigration.WebCameraController.Instance.EnableController(false);
-        }
+        NativeWebView.PluginWrapper.SetSessionPaused(true);
 
         // 3. Show full-screen raycast blocker & pause overlay
         ShowPauseOverlay();
@@ -491,14 +512,8 @@ public class DeviceSynHandler : MonoBehaviour
             if (tts != null) tts.PauseAudio();
         }
 
-        // 6. Block all clicks & raycasts on AssessmentParent
-        if (GameManager.Instance != null && GameManager.Instance.AssessmentParent != null)
-        {
-            var cg = GameManager.Instance.AssessmentParent.GetComponent<CanvasGroup>();
-            if (cg == null) cg = GameManager.Instance.AssessmentParent.AddComponent<CanvasGroup>();
-            cg.interactable = false;
-            cg.blocksRaycasts = false;
-        }
+        // The full-screen overlay blocks Unity UI. The browser bridge blocks
+        // the simulation iframe, which renders above the Unity canvas.
     }
 
     public void ResumeVR()
@@ -510,17 +525,9 @@ public class DeviceSynHandler : MonoBehaviour
         _lastPublishedFingerprint = string.Empty; // force heartbeat republish
         PublishStateIfChanged(force: true);
 
-        // 1. Re-enable Unity EventSystem
-        if (UnityEngine.EventSystems.EventSystem.current != null)
-        {
-            UnityEngine.EventSystems.EventSystem.current.enabled = true;
-        }
-
-        // 2. Re-enable Web Camera look/drag controls
-        if (WebGLMigration.WebCameraController.Instance != null)
-        {
-            WebGLMigration.WebCameraController.Instance.EnableController(true);
-        }
+        EnsureEventSystem.EnsureReady();
+        RestoreUIInput();
+        NativeWebView.PluginWrapper.SetSessionPaused(false);
 
         // 3. Hide pause overlay
         HidePauseOverlay();
@@ -556,17 +563,6 @@ public class DeviceSynHandler : MonoBehaviour
             var tts = FindObjectOfType<GoogleTextToSpeech>();
             if (tts != null) tts.ResumeAudio();
         }
-
-        // 6. Restore clicks & raycasts on AssessmentParent
-        if (GameManager.Instance != null && GameManager.Instance.AssessmentParent != null)
-        {
-            var cg = GameManager.Instance.AssessmentParent.GetComponent<CanvasGroup>();
-            if (cg != null)
-            {
-                cg.interactable = true;
-                cg.blocksRaycasts = true;
-            }
-        }
     }
 
     private void ShowPauseOverlay()
@@ -574,7 +570,6 @@ public class DeviceSynHandler : MonoBehaviour
         if (pauseOverlay != null)
         {
             pauseOverlay.SetActive(true);
-            return;
         }
 
         if (_runtimePauseOverlay == null)
@@ -626,6 +621,15 @@ public class DeviceSynHandler : MonoBehaviour
             bgRect.anchorMin = Vector2.zero;
             bgRect.anchorMax = Vector2.one;
             bgRect.sizeDelta = Vector2.zero;
+
+            // A supplied overlay owns the visuals; retain a separate fullscreen
+            // blocker so its size/raycast settings cannot leak Unity UI clicks.
+            if (pauseOverlay != null)
+            {
+                bgImg.color = Color.clear;
+                DontDestroyOnLoad(canvasGo);
+                return canvasGo;
+            }
 
             // Card container
             GameObject cardGo = new GameObject("PauseCard");
@@ -686,15 +690,7 @@ public class DeviceSynHandler : MonoBehaviour
         isSyncedDevice = true;
         PublishStateIfChanged(force: true);
         // Ensure timeScale and audio are reset when returning to lobby
-        Time.timeScale = 1f;
-        AudioListener.pause = false;
-        _isPaused = false;
-        IsGamePaused = false;
-        HidePauseOverlay();
-        if (UnityEngine.EventSystems.EventSystem.current != null)
-        {
-            UnityEngine.EventSystems.EventSystem.current.enabled = true;
-        }
+        ResetPauseState();
         if (WebGLMigration.WebCameraController.Instance != null)
         {
             WebGLMigration.WebCameraController.Instance.EnableController(true);
@@ -713,15 +709,7 @@ public class DeviceSynHandler : MonoBehaviour
 
     public void LoadScene()
     {
-        Time.timeScale = 1f;
-        AudioListener.pause = false;
-        _isPaused = false;
-        IsGamePaused = false;
-        HidePauseOverlay();
-        if (UnityEngine.EventSystems.EventSystem.current != null)
-        {
-            UnityEngine.EventSystems.EventSystem.current.enabled = true;
-        }
+        ResetPauseState();
         if (WebGLMigration.WebCameraController.Instance != null)
         {
             WebGLMigration.WebCameraController.Instance.EnableController(true);
