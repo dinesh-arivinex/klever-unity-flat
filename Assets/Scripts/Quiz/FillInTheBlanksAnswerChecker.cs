@@ -40,6 +40,7 @@ public class FillInTheBlanksAnswerChecker : MonoBehaviour
     /// </summary>
     public void CheckAnswer()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (isCorrect)
         {
             ApplyColor(correctColor);

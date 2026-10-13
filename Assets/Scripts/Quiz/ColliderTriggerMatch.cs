@@ -41,6 +41,7 @@ public class ColliderTriggerMatch : MonoBehaviour, IDropHandler
 
     public void OnDrop(PointerEventData eventData)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         GameObject droppedObj = eventData.pointerDrag;
         if (droppedObj == null) return;
 

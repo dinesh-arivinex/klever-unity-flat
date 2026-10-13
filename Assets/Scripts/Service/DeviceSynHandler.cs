@@ -490,6 +490,15 @@ public class DeviceSynHandler : MonoBehaviour
             var tts = FindObjectOfType<GoogleTextToSpeech>();
             if (tts != null) tts.PauseAudio();
         }
+
+        // 6. Block all clicks & raycasts on AssessmentParent
+        if (GameManager.Instance != null && GameManager.Instance.AssessmentParent != null)
+        {
+            var cg = GameManager.Instance.AssessmentParent.GetComponent<CanvasGroup>();
+            if (cg == null) cg = GameManager.Instance.AssessmentParent.AddComponent<CanvasGroup>();
+            cg.interactable = false;
+            cg.blocksRaycasts = false;
+        }
     }
 
     public void ResumeVR()
@@ -546,6 +555,17 @@ public class DeviceSynHandler : MonoBehaviour
         {
             var tts = FindObjectOfType<GoogleTextToSpeech>();
             if (tts != null) tts.ResumeAudio();
+        }
+
+        // 6. Restore clicks & raycasts on AssessmentParent
+        if (GameManager.Instance != null && GameManager.Instance.AssessmentParent != null)
+        {
+            var cg = GameManager.Instance.AssessmentParent.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
+            }
         }
     }
 

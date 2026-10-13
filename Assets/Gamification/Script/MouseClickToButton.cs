@@ -13,6 +13,8 @@ public class MouseClickToButton : MonoBehaviour
 
     void OnMouseDown()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         // When the 3D collider is clicked with the mouse, trigger the UI Button's onClick event!
         if (button != null && button.interactable && button.enabled)
         {

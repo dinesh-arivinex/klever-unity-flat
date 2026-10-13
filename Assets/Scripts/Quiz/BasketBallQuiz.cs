@@ -90,6 +90,7 @@ public class BasketBallQuiz : MonoBehaviour
     }
     private void Update()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (Input.GetKeyDown(KeyCode.H))
         {
             NextButtonClick();
@@ -245,6 +246,8 @@ public class BasketBallQuiz : MonoBehaviour
 
     private void OnAnswerClick(int selectedAnswerIndex)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         if (!buttonClicked)
         {
             Button clickedButton = answerButtons[selectedAnswerIndex];
@@ -315,6 +318,7 @@ public class BasketBallQuiz : MonoBehaviour
 
     public void NextButtonClick()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (isProcessingNext) return;
         isProcessingNext = true;
         

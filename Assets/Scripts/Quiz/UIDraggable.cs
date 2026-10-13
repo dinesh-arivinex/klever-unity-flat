@@ -21,12 +21,19 @@ public class UIDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         // Required by Unity EventSystem on some setups to begin tracking drag events!
         Debug.Log("UIDraggable: OnPointerDown fired for " + gameObject.name);
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f))
+        {
+            eventData.pointerDrag = null;
+            return;
+        }
+
         int dragLayer = LayerMask.NameToLayer("Drag");
         if (dragLayer != -1 && gameObject.layer != dragLayer)
         {
@@ -59,6 +66,8 @@ public class UIDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
     public void OnDrag(PointerEventData eventData)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         // Move the UI element with the mouse/touch
         if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
             GetComponent<RectTransform>(),
@@ -76,6 +85,8 @@ public class UIDraggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         Debug.Log("UIDraggable: OnEndDrag fired for " + gameObject.name);
         canvasGroup.blocksRaycasts = true;
 

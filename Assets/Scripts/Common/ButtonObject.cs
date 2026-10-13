@@ -6,6 +6,8 @@ public class ButtonObject : MonoBehaviour
 {
     private void OnMouseDown()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         // Perform button-like actions here
         DebugUtil.Log("Cube clicked!");
 

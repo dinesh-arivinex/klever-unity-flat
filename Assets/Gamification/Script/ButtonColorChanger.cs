@@ -15,6 +15,7 @@ public class ButtonColorChanger : MonoBehaviour
 
     public void OnButtonClick()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         defaultColor = button.colors.normalColor;
         Color newColor = outputColor;
         newColor.a = button.image.color.a; 

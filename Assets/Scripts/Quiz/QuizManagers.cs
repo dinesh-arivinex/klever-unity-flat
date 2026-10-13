@@ -858,6 +858,8 @@ public class QuizManagers : MonoBehaviour
 
     private void OnAnswerClick(int selectedAnswerIndex)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         if (!buttonClicked)
         {
             var liveResponse = new SimpleJSON.JSONObject();
@@ -900,6 +902,7 @@ public class QuizManagers : MonoBehaviour
 
     private void NextButtonClick()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (isProcessingNext) return;
         isProcessingNext = true;
 

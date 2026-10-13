@@ -58,6 +58,8 @@ public class Ontrigger : MonoBehaviour
     }
     public void OnInteractionButtonClicked()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         if (GamificationController.isGamefication)
         {
             GamificationController.isGamefication = false;
@@ -113,11 +115,14 @@ public class Ontrigger : MonoBehaviour
 
     private void OnMouseDown()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         OnInteractionButtonClicked();
     }
 
     private void OnTriggerStay(Collider other)
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
+
         if (other.gameObject.CompareTag("BasketBall"))
         {
             Button temp = answerCurrentButtons.GetComponent<Button>();
