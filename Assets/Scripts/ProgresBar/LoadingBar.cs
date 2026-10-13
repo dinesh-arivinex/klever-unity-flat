@@ -10,6 +10,7 @@ public class LoadingBar : MonoBehaviour
    // public Slider slider;
     public Image sliderNew;
     public TextMeshProUGUI progressText;
+    public GameObject helpUICanvas;
     private RuntimeImportBehaviour importBehaviour;
     public GameObject[] toggleItem;
     private GameObject parentObject;
@@ -31,6 +32,7 @@ public class LoadingBar : MonoBehaviour
         //importBehaviour =FindAnyObjectByType<RuntimeImportBehaviour>();
         // SimulateLoading();
         ToggleObject(false);
+        DisableHelpUICanvas();
 
         if (Camera.main != null)
         {
@@ -125,6 +127,7 @@ public class LoadingBar : MonoBehaviour
         if (loadingScreen != null) loadingScreen.SetActive(false);
         if (blackSphere != null) blackSphere.SetActive(false);
         ToggleObject(true);
+        EnableHelpUICanvas();
         // 3) Fire the StartGame UnityEvent. In the KlassScene prefab this is
         //    wired to RuntimeImportBehaviourHelper.AssetDownloadCallback which
         //    runs FindingModel() + StartSpeaking() (Google TTS) and continues
@@ -176,6 +179,7 @@ public class LoadingBar : MonoBehaviour
         trackingEnabledAt30 = false;
         isLoaded = false;
         if (deviceSynHandler != null) deviceSynHandler.PublishDownloadProgress(0f);
+        DisableHelpUICanvas();
     }
     public void ToggleObject(bool isTrue)
     {
@@ -198,5 +202,83 @@ public class LoadingBar : MonoBehaviour
            
         }
             
+    }
+
+    /// <summary>
+    /// Enables the Help-UICanvas GameObject after loading reaches 100%.
+    /// If not assigned in the inspector, it automatically finds Help-UICanvas in the scene
+    /// and ensures its local scale is reset to Vector3.one so it renders correctly.
+    /// </summary>
+    public void EnableHelpUICanvas()
+    {
+        if (helpUICanvas == null)
+        {
+            var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (activeScene.isLoaded)
+            {
+                foreach (var root in activeScene.GetRootGameObjects())
+                {
+                    if (root != null && root.name.Equals("Help-UICanvas", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        helpUICanvas = root;
+                        break;
+                    }
+                }
+            }
+
+            if (helpUICanvas == null)
+            {
+                var allGos = Resources.FindObjectsOfTypeAll<GameObject>();
+                foreach (var go in allGos)
+                {
+                    if (go != null && go.name.Equals("Help-UICanvas", System.StringComparison.OrdinalIgnoreCase) && go.scene.isLoaded)
+                    {
+                        helpUICanvas = go;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (helpUICanvas != null)
+        {
+            if (helpUICanvas.transform.localScale == Vector3.zero)
+            {
+                helpUICanvas.transform.localScale = Vector3.one;
+            }
+            helpUICanvas.SetActive(true);
+            Debug.Log("[LoadingBar] Help-UICanvas enabled successfully after 100% load.");
+        }
+        else
+        {
+            Debug.LogWarning("[LoadingBar] Help-UICanvas GameObject not found to enable.");
+        }
+    }
+
+    /// <summary>
+    /// Disables the Help-UICanvas GameObject while loading or resetting.
+    /// </summary>
+    public void DisableHelpUICanvas()
+    {
+        if (helpUICanvas != null)
+        {
+            helpUICanvas.SetActive(false);
+        }
+        else
+        {
+            var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (activeScene.isLoaded)
+            {
+                foreach (var root in activeScene.GetRootGameObjects())
+                {
+                    if (root != null && root.name.Equals("Help-UICanvas", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        helpUICanvas = root;
+                        helpUICanvas.SetActive(false);
+                        break;
+                    }
+                }
+            }
+        }
     }
 }

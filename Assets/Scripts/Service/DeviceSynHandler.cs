@@ -699,6 +699,10 @@ public class DeviceSynHandler : MonoBehaviour
         {
             WebGLMigration.WebCameraController.Instance.EnableController(true);
         }
+        if (loadingBar != null)
+        {
+            loadingBar.EnableHelpUICanvas();
+        }
         if (isStartButtonPressed) TriggerWelcomeIfReady();
     }
 
@@ -801,6 +805,8 @@ public class DeviceSynHandler : MonoBehaviour
     }
 
     // ── Hand-raise / Help button API ───────────────────────────────────────
+    public static event System.Action<bool> OnHandRaisedChanged;
+
     /// <summary>
     /// Set the hand-raised state and immediately republish device state so
     /// the teacher dashboard sees the change in real time. No-op if the
@@ -813,6 +819,7 @@ public class DeviceSynHandler : MonoBehaviour
         // Force fingerprint reset so the next publish always goes out.
         _lastPublishedFingerprint = string.Empty;
         PublishStateIfChanged(force: true);
+        OnHandRaisedChanged?.Invoke(raised);
     }
 
     /// <summary>Raise the hand — called by HelpButton.</summary>
