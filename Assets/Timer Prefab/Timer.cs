@@ -20,8 +20,21 @@ public class Timer : MonoBehaviour
         timerIsRunning = true;
     }
 
+    public void TimerPause()
+    {
+        timerIsRunning = false;
+        DeviceSynHandler.Pause();
+    }
+
+    public void TimerResume()
+    {
+        timerIsRunning = true;
+        DeviceSynHandler.Resume();
+    }
+
     void Update()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (timerIsRunning)
         {
             if (timeRemaining > 0)

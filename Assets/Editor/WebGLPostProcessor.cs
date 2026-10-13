@@ -99,6 +99,32 @@ public class WebGLPostProcessor
             Debug.Log("[WebGLPostProcessor] Injected AudioContext resume listener into index.html.");
         }
 
+        // Fix 4: Inject global kleverPauseGame and kleverResumeGame helpers
+        if (!html.Contains("kleverPauseGame"))
+        {
+            string pauseHelpers =
+@"    <script id=""klever-pause-controls"">
+      window.kleverPauseGame = function() {
+        try {
+          if (window.unityInstance) {
+            window.unityInstance.SendMessage('Sync', 'PauseGame');
+          }
+        } catch(e) { console.warn('kleverPauseGame error:', e); }
+      };
+      window.kleverResumeGame = function() {
+        try {
+          if (window.unityInstance) {
+            window.unityInstance.SendMessage('Sync', 'ResumeGame');
+          }
+        } catch(e) { console.warn('kleverResumeGame error:', e); }
+      };
+    </script>
+  </body>";
+            html = html.Replace("</body>", pauseHelpers);
+            modified = true;
+            Debug.Log("[WebGLPostProcessor] Injected kleverPauseGame and kleverResumeGame into index.html.");
+        }
+
         if (modified)
         {
             File.WriteAllText(indexPath, html);

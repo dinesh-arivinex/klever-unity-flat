@@ -6,6 +6,7 @@ public class ClickDebugger : MonoBehaviour
 {
     void Update()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (Input.GetMouseButtonDown(0))
         {
             Debug.Log("Mouse clicked at " + Input.mousePosition);

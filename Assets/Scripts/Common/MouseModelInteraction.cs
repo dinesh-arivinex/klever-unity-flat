@@ -17,7 +17,7 @@ public class MouseModelInteraction : MonoBehaviour
 
     void Update()
     {
-        if (DeviceSynHandler.IsGamePaused)
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f))
         {
             isDragging = false;
             isPanning = false;

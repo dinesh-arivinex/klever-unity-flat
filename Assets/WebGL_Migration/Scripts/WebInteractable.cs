@@ -14,7 +14,7 @@ namespace WebGLMigration
 
         void Update()
         {
-            if (DeviceSynHandler.IsGamePaused) return;
+            if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             

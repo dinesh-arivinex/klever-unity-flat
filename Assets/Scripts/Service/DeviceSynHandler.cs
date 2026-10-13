@@ -86,6 +86,13 @@ public class DeviceSynHandler : MonoBehaviour
     public bool IsHandRaised => _handRaised;
     private string experienceId = "";
 
+    public static DeviceSynHandler Instance { get; private set; }
+
+    void Awake()
+    {
+        Instance = this;
+    }
+
     void Start()
     {
         isFirstTime = true;
@@ -103,6 +110,7 @@ public class DeviceSynHandler : MonoBehaviour
             KlassMqttClient.Instance.OnDisconnected -= HandleMqttDisconnected;
             KlassMqttClient.Instance.OnSessionControl -= HandleSessionControl;
             KlassMqttClient.Instance.OnCommand -= HandleCommand;
+            KlassMqttClient.Instance.OnBroadcast -= HandleBroadcast;
         }
     }
 
@@ -171,6 +179,7 @@ public class DeviceSynHandler : MonoBehaviour
         c.OnDisconnected += HandleMqttDisconnected;
         c.OnSessionControl += HandleSessionControl;
         c.OnCommand += HandleCommand;
+        c.OnBroadcast += HandleBroadcast;
         c.Begin();
         if (c.IsConnected) HandleMqttConnected();
     }
@@ -290,28 +299,29 @@ public class DeviceSynHandler : MonoBehaviour
         }
 
         // Handle play / pause for a running session.
-        bool isPaused = payload["isPaused"].AsBool;
-        Klass.Net.LiveViewPublisher.Instance?.TrackSessionState(isStart, isPaused, isStop);
-        if (isStart && isOpenGame)
+        bool hasPauseSignal = payload["isPaused"] != null || payload["paused"] != null || payload["playState"] != null || payload["status"] != null;
+        if (hasPauseSignal)
         {
-            if (isPaused && !_isPaused)
+            bool isPaused = payload["isPaused"].AsBool 
+                || payload["paused"].AsBool 
+                || (payload["playState"] != null && payload["playState"].Value.ToLowerInvariant() == "paused")
+                || (payload["status"] != null && payload["status"].Value.ToLowerInvariant() == "paused");
+
+            Klass.Net.LiveViewPublisher.Instance?.TrackSessionState(isStart, isPaused, isStop);
+            if (isOpenGame || _isPaused)
             {
-                UnityEngine.Debug.Log("[DeviceSynHandler] Pausing VR Experience.");
-                _isPaused = true;
-                _lastPublishedFingerprint = string.Empty; // force heartbeat republish
-                PublishStateIfChanged(force: true);
-                PauseVR();
-            }
-            else if (!isPaused && _isPaused)
-            {
-                UnityEngine.Debug.Log("[DeviceSynHandler] Resuming VR Experience.");
-                _isPaused = false;
-                _lastPublishedFingerprint = string.Empty;
-                PublishStateIfChanged(force: true);
-                ResumeVR();
+                if (isPaused && !_isPaused)
+                {
+                    UnityEngine.Debug.Log("[DeviceSynHandler] Pausing VR Experience from session control.");
+                    PauseVR();
+                }
+                else if (!isPaused && _isPaused)
+                {
+                    UnityEngine.Debug.Log("[DeviceSynHandler] Resuming VR Experience from session control.");
+                    ResumeVR();
+                }
             }
         }
-
     }
 
     public void TriggerWebGLAutoStart()
@@ -362,16 +372,77 @@ public class DeviceSynHandler : MonoBehaviour
         // the live dashboard. Lower the hand locally and re-publish state so
         // the retained MQTT message no longer carries handRaised:true.
         else if (action == "clearHand") LowerHand();
+        else if (action == "pause") PauseGame();
+        else if (action == "resume" || action == "play") ResumeGame();
+    }
+
+    private void HandleBroadcast(JSONNode payload)
+    {
+        if (payload == null) return;
+        string action = payload["action"];
+        if (action == "pause") PauseGame();
+        else if (action == "resume" || action == "play") ResumeGame();
+        else if (payload["isPaused"] != null)
+        {
+            if (payload["isPaused"].AsBool) PauseGame();
+            else ResumeGame();
+        }
+        else if (payload["paused"] != null)
+        {
+            if (payload["paused"].AsBool) PauseGame();
+            else ResumeGame();
+        }
     }
 
     public void ActiveDeviceStatus() => PublishStateIfChanged(force: false);
 
-    private void PauseVR()
+    public void PauseGame() => PauseVR();
+    public void ResumeGame() => ResumeVR();
+
+    public void SetPauseState(string state)
+    {
+        if (string.IsNullOrEmpty(state)) return;
+        string s = state.Trim().ToLowerInvariant();
+        if (s == "true" || s == "1" || s == "pause" || s == "paused")
+        {
+            PauseVR();
+        }
+        else if (s == "false" || s == "0" || s == "resume" || s == "resumed" || s == "play")
+        {
+            ResumeVR();
+        }
+    }
+
+    public static void Pause()
+    {
+        if (Instance != null) Instance.PauseVR();
+        else
+        {
+            IsGamePaused = true;
+            Time.timeScale = 0f;
+            AudioListener.pause = true;
+        }
+    }
+
+    public static void Resume()
+    {
+        if (Instance != null) Instance.ResumeVR();
+        else
+        {
+            IsGamePaused = false;
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+        }
+    }
+
+    public void PauseVR()
     {
         _isPaused = true;
         IsGamePaused = true;
         Time.timeScale = 0f;
         AudioListener.pause = true;
+        _lastPublishedFingerprint = string.Empty; // force heartbeat republish
+        PublishStateIfChanged(force: true);
 
         // 1. Disable Unity EventSystem to block all UI clicks, buttons, and pointer events
         if (UnityEngine.EventSystems.EventSystem.current != null)
@@ -421,12 +492,14 @@ public class DeviceSynHandler : MonoBehaviour
         }
     }
 
-    private void ResumeVR()
+    public void ResumeVR()
     {
         _isPaused = false;
         IsGamePaused = false;
         Time.timeScale = 1f;
         AudioListener.pause = false;
+        _lastPublishedFingerprint = string.Empty; // force heartbeat republish
+        PublishStateIfChanged(force: true);
 
         // 1. Re-enable Unity EventSystem
         if (UnityEngine.EventSystems.EventSystem.current != null)

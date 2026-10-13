@@ -8,7 +8,7 @@ public class Raycast : MonoBehaviour
 
     private void Update()
     {
-        if (DeviceSynHandler.IsGamePaused) return;
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         // Check if the left mouse button is clicked
         if (Input.GetMouseButtonDown(0))
         {

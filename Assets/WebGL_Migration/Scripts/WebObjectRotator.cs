@@ -14,7 +14,7 @@ namespace WebGLMigration
 
         void Update()
         {
-            if (DeviceSynHandler.IsGamePaused)
+            if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f))
             {
                 isDragging = false;
                 return;

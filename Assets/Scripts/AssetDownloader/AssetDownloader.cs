@@ -73,6 +73,18 @@ public class AssetDownloader : MonoBehaviour
         
     }
 
+    public void TimerPause()
+    {
+        timerIsRunning = false;
+        DeviceSynHandler.Pause();
+    }
+
+    public void TimerResume()
+    {
+        timerIsRunning = true;
+        DeviceSynHandler.Resume();
+    }
+
     public void DownloadingAssetBackgrount()
     {
         if(api.IsmodelDownload())
@@ -126,6 +138,7 @@ public class AssetDownloader : MonoBehaviour
     }
     void FixedUpdate()
     {
+        if (DeviceSynHandler.IsGamePaused || Mathf.Approximately(Time.timeScale, 0f)) return;
         if (timerIsRunning)
         {
             if (timeRemaining > 0)
