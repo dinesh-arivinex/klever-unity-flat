@@ -21,6 +21,7 @@ namespace Klass.Net
 
         public JSONNode CurrentSnapshot { get; private set; }
         public long LastSequence { get; private set; }
+        private string streamIdentity = string.Empty;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureInstance()
@@ -57,6 +58,13 @@ namespace Klass.Net
             try { node = JSONNode.Parse(json); }
             catch (Exception exception) { Debug.LogWarning($"[LiveViewObserver] Invalid JSON: {exception.Message}"); return false; }
             if (node == null || node["schemaVersion"].AsInt != LiveViewPublisher.SchemaVersion) return false;
+            var identity = node["clientSessionId"].Value + ":" + node["experienceId"].Value;
+            if (identity != streamIdentity)
+            {
+                streamIdentity = identity;
+                LastSequence = 0;
+                CurrentSnapshot = null;
+            }
             long sequence;
             if (!long.TryParse(node["sequence"].Value, out sequence)) sequence = 0;
             if (sequence > 0 && sequence < LastSequence) return false;

@@ -89,6 +89,14 @@ mergeInto(LibraryManager.library, {
             self.applyLayout(self.lastParams || {});
           };
 
+          window.addEventListener("message", function(event) {
+            var iframe = document.getElementById(self.iframeId);
+            if (!iframe || event.source !== iframe.contentWindow || !event.data || event.data.type !== "klever:simulation-ready") return;
+            var origin;
+            try { origin = iframe.srcdoc ? window.location.origin : new URL(iframe.src, window.location.href).origin; } catch (_) { return; }
+            if (event.origin !== origin) return;
+            self.notifySimulationPause(iframe, !!window.__nativeWebViewSessionPaused);
+          });
           window.addEventListener("resize", handler);
           window.addEventListener("scroll", handler);
           this.resizeHandlerRegistered = true;
@@ -99,15 +107,14 @@ mergeInto(LibraryManager.library, {
           if (!container) return;
           var paused = !!window.__nativeWebViewSessionPaused;
           var iframe = document.getElementById(this.iframeId);
-          // Hiding an iframe only blocks its input; its HTML/Web Audio keeps
-          // running independently of Unity. Discard the browsing context to
-          // stop all audio, including cross-origin and Web Audio simulations.
-          // Resume deliberately reloads the simulation (progress restarts).
-          if (paused && iframe) {
-            this.suspendedParams = this.lastParams;
-            this.removeIframe();
-            this.removeToolbar();
+          // Keep the browsing context: recreating it resets the simulation.
+          // Hosted simulations acknowledge this protocol via simulation-session-bridge.js.
+          if (iframe) {
+            iframe.style.pointerEvents = paused ? "none" : "auto";
+            this.notifySimulationPause(iframe, paused);
           }
+          var toolbar = document.getElementById(this.toolbarId);
+          if (toolbar) toolbar.style.pointerEvents = paused ? "none" : "auto";
           if (!paused && this.suspendedParams) {
             var resumeParams = this.suspendedParams;
             this.suspendedParams = null;
@@ -120,7 +127,7 @@ mergeInto(LibraryManager.library, {
             if (shield && shield.parentNode) shield.parentNode.removeChild(shield);
             return;
           }
-          if (!this.suspendedParams || container.style.display === "none") return;
+          if ((!iframe && !this.suspendedParams) || container.style.display === "none") return;
           if (!shield) {
             shield = document.createElement("div");
             shield.id = this.pauseShieldId;
@@ -147,6 +154,15 @@ mergeInto(LibraryManager.library, {
           }
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
           shield.focus();
+        },
+
+        notifySimulationPause: function(iframe, paused) {
+          if (!iframe || !iframe.contentWindow) return;
+          try {
+            var origin = iframe.srcdoc ? window.location.origin : new URL(iframe.src, window.location.href).origin;
+            if (origin === "null") return;
+            iframe.contentWindow.postMessage({ type: "klever:session-control", version: 1, paused: !!paused }, origin);
+          } catch (_) { /* A removed/unloaded child will receive state after its next load. */ }
         },
 
         hideContainer: function() {
@@ -767,6 +783,7 @@ mergeInto(LibraryManager.library, {
               }
             }
 
+            self.notifySimulationPause(iframe, !!window.__nativeWebViewSessionPaused);
             self.sendToUnity("OnSuccess", "WebView loaded");
           };
 

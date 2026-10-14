@@ -70,6 +70,7 @@ public class DeviceSynHandler : MonoBehaviour
     private bool isFirstTime;
     private bool isLobby = true;
     private bool _isPaused;
+    private bool resumeAfterApplicationPause;
     private readonly System.Collections.Generic.List<UnityEngine.EventSystems.BaseInputModule> _pausedInputModules
         = new System.Collections.Generic.List<UnityEngine.EventSystems.BaseInputModule>();
     public static bool IsGamePaused { get; private set; } = false;
@@ -87,6 +88,18 @@ public class DeviceSynHandler : MonoBehaviour
     private bool _handRaised;
     public bool IsHandRaised => _handRaised;
     private string experienceId = "";
+    private static string pendingStartPayload;
+    private static string lastControlCommand;
+    public static bool WaitForConsoleStart { get; private set; }
+    private bool reloadingScene;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSessionStatics()
+    {
+        pendingStartPayload = null;
+        lastControlCommand = null;
+        WaitForConsoleStart = false;
+    }
 
     public static DeviceSynHandler Instance { get; private set; }
 
@@ -122,6 +135,18 @@ public class DeviceSynHandler : MonoBehaviour
         isActiveDevice = false;
         isOpenWelcomeScreen = true;
         isGameOver = false;
+        // MQTT survives scene reloads; attach the new scene handler immediately.
+        if (KlassMqttClient.Instance != null) BootMqtt();
+        if (!string.IsNullOrEmpty(pendingStartPayload)) StartCoroutine(ApplyPendingStart());
+    }
+
+    private IEnumerator ApplyPendingStart()
+    {
+        // All scene Start methods (including API dependencies) must run first.
+        yield return null;
+        var queued = pendingStartPayload;
+        pendingStartPayload = null;
+        if (!string.IsNullOrEmpty(queued)) ApplySessionControl(JSONNode.Parse(queued), false);
     }
 
     void OnDestroy()
@@ -216,6 +241,20 @@ public class DeviceSynHandler : MonoBehaviour
 
     private void HandleSessionControl(JSONNode payload)
     {
+        if (payload == null) return;
+        string id = payload["msgId"].Value;
+        if (string.IsNullOrEmpty(id)) id = payload["commandId"].Value;
+        if (string.IsNullOrEmpty(id)) id = payload["ts"].Value;
+        if (string.IsNullOrEmpty(id)) id = payload["timestamp"].Value;
+        string key = string.IsNullOrEmpty(id) ? null : id + ":" + payload["action"].Value
+            + ":" + payload["isStart"].Value + ":" + payload["isStop"].Value + ":" + payload["isPaused"].Value;
+        if (key != null && key == lastControlCommand) return;
+        if (key != null) lastControlCommand = key;
+        ApplySessionControl(payload, true);
+    }
+
+    private void ApplySessionControl(JSONNode payload, bool allowRestart)
+    {
         UnityEngine.Debug.Log($"[DeviceSynHandler] HandleSessionControl called with payload: {(payload != null ? payload.ToString() : "null")}");
         if (payload == null || payload.Count == 0)
         {
@@ -227,14 +266,43 @@ public class DeviceSynHandler : MonoBehaviour
 
         if (isStop)
         {
-            Klass.Net.LiveViewPublisher.Instance?.TrackSessionState(false, false, true);
-            if (!isLobby && !isStopCalling)
+            pendingStartPayload = null;
+            WaitForConsoleStart = true;
+            LoadScene();
+            return;
+        }
+        string action = payload["action"].Value.ToLowerInvariant();
+        bool requestsPause = payload["isPaused"].AsBool || payload["paused"].AsBool
+            || payload["playState"].Value == "paused" || payload["status"].Value == "paused";
+        bool explicitStart = action == "start" || action == "restart";
+        if (reloadingScene)
+        {
+            // Preserve the newest complete control snapshot while Unity changes scenes.
+            if (isStart || explicitStart)
             {
-                isStopCalling = true;
-                LoadScene();
+                pendingStartPayload = payload.ToString();
+                WaitForConsoleStart = false;
             }
             return;
         }
+        var transition = SessionControlPolicy.Decide(isStart, false, requestsPause, explicitStart,
+            action == "resume" || action == "play", isOpenGame, _isPaused, reloadingScene);
+        if (transition == SessionTransition.Resume) { ResumeVR(); return; }
+        if (transition == SessionTransition.Pause) { resumeAfterApplicationPause = false; PauseVR(); return; }
+        if (transition == SessionTransition.Start || transition == SessionTransition.Restart)
+        {
+            WaitForConsoleStart = false;
+            if (!string.IsNullOrEmpty(payload["experienceId"].Value))
+                LiveViewPublisher.Instance?.SetExperienceId(payload["experienceId"].Value);
+            if (allowRestart && (isOpenGame || reloadingScene))
+            {
+                pendingStartPayload = payload.ToString();
+                LoadScene();
+                return;
+            }
+            isStart = true;
+        }
+        if (reloadingScene) return;
 
         UnityEngine.Debug.Log($"[DeviceSynHandler] Session Control Status: isStart={isStart}, isStop={isStop}, isOpenGame={isOpenGame}");
 
@@ -383,7 +451,19 @@ public class DeviceSynHandler : MonoBehaviour
         KlassMqttClient.Instance?.PublishCmdAck(msgId, ok: true);
         // "stop" reloads the scene (returns to lobby); "disconnect" does the same
         // and is sent when a teacher explicitly removes a device mid-session.
-        if (action == "stop" || action == "disconnect") LoadScene();
+        if (action == "stop" || action == "disconnect")
+        {
+            pendingStartPayload = null;
+            WaitForConsoleStart = true;
+            LoadScene();
+        }
+        else if (action == "start" || action == "restart")
+        {
+            var start = JSONNode.Parse(cmd.ToString());
+            start["isStart"] = true;
+            start["isStop"] = false;
+            HandleSessionControl(start);
+        }
         // "clearHand" is sent when the teacher acknowledges a hand raise from
         // the live dashboard. Lower the hand locally and re-publish state so
         // the retained MQTT message no longer carries handRaised:true.
@@ -412,7 +492,7 @@ public class DeviceSynHandler : MonoBehaviour
 
     public void ActiveDeviceStatus() => PublishStateIfChanged(force: false);
 
-    public void PauseGame() => PauseVR();
+    public void PauseGame() { resumeAfterApplicationPause = false; PauseVR(); }
     public void ResumeGame() => ResumeVR();
 
     public void SetPauseState(string state)
@@ -453,8 +533,25 @@ public class DeviceSynHandler : MonoBehaviour
         }
     }
 
+    private void OnApplicationPause(bool paused)
+    {
+        if (!isOpenGame || reloadingScene) return;
+        if (paused)
+        {
+            resumeAfterApplicationPause = !_isPaused;
+            if (resumeAfterApplicationPause) PauseVR();
+        }
+        else if (resumeAfterApplicationPause)
+        {
+            resumeAfterApplicationPause = false;
+            ResumeVR();
+        }
+    }
+
     public void PauseVR()
     {
+        if (_isPaused || reloadingScene) return;
+        LiveViewPublisher.Instance?.TrackSessionState(isOpenGame, true, false);
         _isPaused = true;
         IsGamePaused = true;
         Time.timeScale = 0f;
@@ -518,6 +615,8 @@ public class DeviceSynHandler : MonoBehaviour
 
     public void ResumeVR()
     {
+        if (!_isPaused || reloadingScene) return;
+        LiveViewPublisher.Instance?.TrackSessionState(isOpenGame, false, false);
         _isPaused = false;
         IsGamePaused = false;
         Time.timeScale = 1f;
@@ -689,8 +788,8 @@ public class DeviceSynHandler : MonoBehaviour
         isStartGame = true;
         isSyncedDevice = true;
         PublishStateIfChanged(force: true);
-        // Ensure timeScale and audio are reset when returning to lobby
-        ResetPauseState();
+        // Completing a download must not override an active teacher/app pause.
+        if (!_isPaused) ResetPauseState();
         if (WebGLMigration.WebCameraController.Instance != null)
         {
             WebGLMigration.WebCameraController.Instance.EnableController(true);
@@ -709,7 +808,18 @@ public class DeviceSynHandler : MonoBehaviour
 
     public void LoadScene()
     {
+        if (reloadingScene) return;
+        bool needsReload = isOpenGame || isOpening || !isLobby;
+        reloadingScene = true;
+        // Browser DOM outlives Unity scene objects. Close it before unpausing.
+        if (NativeWebView.WebViewController.Instance != null)
+            NativeWebView.WebViewController.Instance.StopSimulation();
+        NativeWebView.PluginWrapper.CloseWebView();
+        LiveViewPublisher.Instance?.TrackSessionState(false, false, true);
+        StopAllCoroutines();
+        if (apiManager != null) apiManager.StopAllCoroutines();
         ResetPauseState();
+        isOpenWelcomeScreen = true;
         if (WebGLMigration.WebCameraController.Instance != null)
         {
             WebGLMigration.WebCameraController.Instance.EnableController(true);
@@ -725,6 +835,7 @@ public class DeviceSynHandler : MonoBehaviour
         _handRaised = false;
         experienceId = null;
         PublishStateIfChanged(force: true);
+        if (!needsReload) { reloadingScene = false; return; }
         int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
         SceneManager.LoadScene(currentSceneIndex);
     }

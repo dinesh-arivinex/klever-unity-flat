@@ -1,0 +1,52 @@
+--- a/klever-frontend-next/app/(dashboard)/device-connect/page.tsx
++++ b/klever-frontend-next/app/(dashboard)/device-connect/page.tsx
+@@ -124,6 +124,7 @@
+     try {
+       setBusy('start')
+       const control = await sessionsApi.updateLive({
++        action: 'start',
+         isStart: true,
+         isStop: false,
+         isPaused: false,
+@@ -142,6 +143,7 @@
+     try {
+       setBusy('pause')
+       const control = await sessionsApi.updateLive({
++        action: 'pause',
+         isStart: true,
+         isStop: false,
+         isPaused: true,
+@@ -159,6 +161,7 @@
+     try {
+       setBusy('resume')
+       const control = await sessionsApi.updateLive({
++        action: 'resume',
+         isStart: true,
+         isStop: false,
+         isPaused: false,
+--- a/klever-backend/src/services/sessionControl.service.js
++++ b/klever-backend/src/services/sessionControl.service.js
+@@ -328,6 +328,15 @@
+ async function updateLiveControl(schoolId, body, user = {}) {
+   const { isStart, isStop, isPaused, experienceId, gradeId, sectionId } =
+     body || {};
++  const action = body?.action;
++  if (action !== undefined && !['start', 'restart', 'pause', 'resume'].includes(action)) {
++    throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported session action.');
++  }
++  if ((['start', 'restart'].includes(action) && (isStart !== true || isStop === true || isPaused === true)) ||
++      (action === 'pause' && isPaused !== true) ||
++      (action === 'resume' && (isPaused !== false || isStop === true))) {
++    throw new ApiError(httpStatus.BAD_REQUEST, 'Session action does not match its playback state.');
++  }
+   let live = await liveControl.findOne({ schoolId });
+ 
+   // If no liveControl row exists, handle gracefully instead of throwing "No live class found"
+@@ -425,6 +434,7 @@
+   if (sectionId !== undefined) live.sectionId = sectionId;
+ 
+   const payload = {
++    ...(action ? { action } : {}),
+     isStart: !!live.isStart,
+     isStop: !!live.isStop,
+     isPaused: !!live.isPaused,

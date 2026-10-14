@@ -13,6 +13,7 @@ function setup() {
     addEventListener() {},
     createElement(tag) {
       const element = {
+        contentWindow: {messages:[],postMessage(message,origin){this.messages.push({message,origin});}},
         tag, style: {}, children: [], clientWidth: 1280, clientHeight: 720,
         setAttribute() {},
         appendChild(child) {
@@ -35,7 +36,7 @@ function setup() {
   const library = {};
   const window = {
     addEventListener() {}, requestAnimationFrame(fn) { fn(); },
-    history: { pushState() {} }, location: { href: 'https://classroom.example/' }
+    history: { pushState() {} }, location: { href: 'https://classroom.example/',origin:'https://classroom.example' }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,
     '../../Assets/NativeWebViewPlugin/Plugins/WebGL/NativeWebView.jslib'), 'utf8'), {
@@ -46,16 +47,19 @@ function setup() {
   return { library, window, document, elements, show };
 }
 
-test('pause destroys the simulation document and shields input; resume reloads its original URL', () => {
+test('pause preserves the simulation document and shields input; resume retains progress', () => {
   const { library, document, elements, show } = setup();
   library.NWV_Init('NativeBridge');
   show();
   const iframe = elements.get('native-webview-plugin-iframe');
   iframe.focus();
   library.NWV_SetSessionPaused(1);
-  assert.equal(elements.has('native-webview-plugin-iframe'), false);
-  assert.equal(iframe.parentNode, null);
-  assert.equal(elements.has('native-webview-plugin-toolbar'), false);
+  assert.equal(elements.get('native-webview-plugin-iframe'), iframe);
+  assert.ok(iframe.parentNode);
+  assert.equal(iframe.style.pointerEvents,'none');
+  assert.ok(elements.has('native-webview-plugin-toolbar'));
+  assert.equal(iframe.contentWindow.messages.at(-1).message.paused,true);
+  assert.equal(iframe.contentWindow.messages.at(-1).origin,'https://simulation.example');
   const shield = elements.get('native-webview-plugin-pause-shield');
   assert.equal(shield.style.pointerEvents, 'auto');
   assert.equal(document.activeElement, shield);
@@ -67,7 +71,9 @@ test('pause destroys the simulation document and shields input; resume reloads i
   library.NWV_SetSessionPaused(0);
   const reloaded = elements.get('native-webview-plugin-iframe');
   assert.ok(reloaded);
-  assert.notEqual(reloaded, iframe);
+  assert.equal(reloaded, iframe);
+  assert.equal(iframe.style.pointerEvents,'auto');
+  assert.equal(iframe.contentWindow.messages.at(-1).message.paused,false);
   assert.equal(reloaded.src, 'https://simulation.example/');
   assert.equal(elements.has('native-webview-plugin-pause-shield'), false);
   assert.ok(elements.has('native-webview-plugin-toolbar'));
@@ -102,7 +108,7 @@ test('close while paused stays closed on resume and reopening starts interactive
   assert.equal(elements.get('native-webview-plugin-iframe').src, 'https://simulation.example/');
 });
 
-test('inline HTML is unloaded on pause and restored only on resume', () => {
+test('inline HTML remains mounted while paused and resumes the same document', () => {
   const { library, elements } = setup();
   library.NWV_Init('NativeBridge');
   const html = '<audio autoplay loop src="tone.wav"></audio>';
@@ -110,8 +116,9 @@ test('inline HTML is unloaded on pause and restored only on resume', () => {
   const iframe = elements.get('native-webview-plugin-iframe');
   assert.equal(iframe.srcdoc, html);
   library.NWV_SetSessionPaused(1);
-  assert.equal(iframe.parentNode, null);
-  assert.equal(elements.has('native-webview-plugin-iframe'), false);
+  assert.ok(iframe.parentNode);
+  assert.equal(elements.get('native-webview-plugin-iframe'),iframe);
+  assert.equal(iframe.contentWindow.messages.at(-1).origin,'https://classroom.example');
   library.NWV_SetSessionPaused(0);
   assert.equal(elements.get('native-webview-plugin-iframe').srcdoc, html);
 });
@@ -124,7 +131,8 @@ test('late load/error callbacks from an unloaded simulation do not report succes
   const reports = [];
   window.__nativeWebViewBridge.sendToUnity = (...args) => reports.push(args);
   window.open = () => { throw new Error('Unloaded frame must not open a tab'); };
-  library.NWV_SetSessionPaused(1);
+  library.NWV_CloseWebView();
+  reports.length = 0;
   iframe.onload();
   iframe.onerror();
   assert.deepEqual(reports, []);

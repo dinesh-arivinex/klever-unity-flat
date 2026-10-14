@@ -19,6 +19,7 @@ namespace NativeWebView
         public UnityEvent startingevent;
         public UnityEvent endevent;
         private Coroutine timerCoroutine;
+        private bool simulationRunning;
         public float simulationTimer;
         public GameObject webViewChild;
         private GamificationManager gamificationManager;
@@ -76,6 +77,10 @@ namespace NativeWebView
         public void AssignSimulation(string time, string url)
         {
             _fallbackUrl = url;
+            simulationRunning = true;
+            var details = new SimpleJSON.JSONObject();
+            details["durationSeconds"] = ConvertTimeToSeconds(time);
+            Klass.Net.LiveViewPublisher.Instance?.ShowContent("simulation", url, url, details);
             startingevent.Invoke();
             simulationTimer = ConvertTimeToSeconds(time);
             
@@ -88,7 +93,7 @@ namespace NativeWebView
                 CalculateAndSetPadding();
             }
             
-            if (this.gameObject.transform.childCount > 0)
+            if (this.gameObject.transform.childCount > 1)
             {
                 this.gameObject.transform.GetChild(1).gameObject.SetActive(true);
             }
@@ -106,6 +111,7 @@ namespace NativeWebView
             if (string.IsNullOrEmpty(displayTimeStr) || string.IsNullOrEmpty(_fallbackUrl))
             {
                 Debug.LogWarning("[WebViewController] Missing displayTimeStr or _fallbackUrl when starting simulation! Skipping to MCQ.");
+                simulationRunning = true;
                 CheckTheStatus();
                 return;
             }
@@ -167,9 +173,30 @@ namespace NativeWebView
         // After the countdown is complete, check the status
         CheckTheStatus();
     }
-    public void CheckTheStatus()
+        // Cancellation must never advance the lesson into an assessment.
+        public void StopSimulation()
+        {
+            if (timerCoroutine != null) StopCoroutine(timerCoroutine);
+            timerCoroutine = null;
+            if (simulationRunning)
+            {
+                simulationRunning = false;
+                PluginWrapper.CloseWebView();
+                Klass.Net.LiveViewPublisher.Instance?.HideContent("simulation_stopped");
+            }
+        }
+        private void OnDisable() => StopSimulation();
+        private void OnDestroy()
+        {
+            StopSimulation();
+            if (Instance == this) Instance = null;
+        }
 
+    public void CheckTheStatus()
     {
+        if (!simulationRunning) return;
+        simulationRunning = false;
+        Klass.Net.LiveViewPublisher.Instance?.HideContent("simulation_completed");
         //PlayerPrefs.SetInt("InSimulation", 0);
         PlayerPrefs.Save();
 

@@ -167,10 +167,10 @@ public class API : MonoBehaviour
                     isWebGl = true;
                 }
 
-                bool shouldBypassForWebGl = isWebGl && hasValidExperience;
+                bool shouldBypassForWebGl = isWebGl && hasValidExperience && !DeviceSynHandler.WaitForConsoleStart;
 
                 UnityEngine.Debug.Log($"[API] State Validation check: isOpenWelcomeScreen={DeviceSynHandler.isOpenWelcomeScreen} (needed: false), isLoadedResponse={isLoadedResponse} (needed: false), shouldBypassForWebGl={shouldBypassForWebGl}");
-                if ((DeviceSynHandler.isOpenWelcomeScreen == false || shouldBypassForWebGl) && isLoadedResponse != true)
+                if (!DeviceSynHandler.WaitForConsoleStart && (DeviceSynHandler.isOpenWelcomeScreen == false || shouldBypassForWebGl) && isLoadedResponse != true)
                 {
                     UnityEngine.Debug.Log("[API] State validation succeeded. Parsing experience data...");
                     if (spaceData == null || spaceData.Count == 0 || spaceData[0] == null)

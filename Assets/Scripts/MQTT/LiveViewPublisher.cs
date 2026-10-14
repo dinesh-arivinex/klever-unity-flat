@@ -63,6 +63,7 @@ namespace Klass.Net
                 PublishLearningEventNow(_hasJoined ? "student_reconnected" : "student_joined");
                 _hasJoined = true;
                 PublishPreviousRunFailureIfNeeded();
+                PublishSnapshot();
             }
             _wasConnected = connected;
             if (!connected || string.IsNullOrEmpty(_experienceId)) return;
@@ -105,6 +106,8 @@ namespace Klass.Net
             _snapshot["assetUrl"] = assetUrl ?? string.Empty;
             _snapshot["status"] = "visible";
             if (details != null) _snapshot["details"] = details;
+            _snapshot["playState"] = _sessionPaused ? "paused" : "playing";
+            _snapshot["sessionPaused"] = _sessionPaused;
             _currentMode = _snapshot["mode"].Value;
             _currentContentId = contentId ?? string.Empty;
             _contentStartedAt = Now();
@@ -218,10 +221,16 @@ namespace Klass.Net
 
         public void TrackSessionState(bool isStarted, bool isPaused, bool isStopped)
         {
+            if (_snapshot != null && !isStopped)
+            {
+                _snapshot["playState"] = isPaused ? "paused" : "playing";
+                _snapshot["sessionPaused"] = isPaused;
+                PublishSnapshot();
+            }
             if (isStopped)
             {
                 EndCurrentContent(false); PublishLearningEventNow("session_stopped");
-                _sessionStarted = false; _sessionPaused = false; return;
+                _sessionStarted = false; _sessionPaused = false; HideContent("stopped"); return;
             }
             if (isStarted && !_sessionStarted)
             {
@@ -284,7 +293,7 @@ namespace Klass.Net
 
         private JSONObject Envelope(string eventType)
         {
-            var node = new JSONObject(); node["schemaVersion"] = SchemaVersion; node["eventType"] = eventType; node["experienceId"] = _experienceId;
+            var node = new JSONObject(); node["schemaVersion"] = SchemaVersion; node["eventType"] = eventType; node["experienceId"] = _experienceId; node["clientSessionId"] = _clientSessionId;
             node["sequence"] = (++_sequence).ToString(); node["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(); return node;
         }
 

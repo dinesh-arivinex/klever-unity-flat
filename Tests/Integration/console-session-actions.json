@@ -1,0 +1,12 @@
+[
+  {
+    "file": "C:\\Users\\Admin\\Desktop\\internal\\klever\\klever-frontend-next\\app\\(dashboard)\\device-connect\\page.tsx",
+    "beforeSha256": "13259bcacd9891030f5c532090300613989cd7b4925b581e66819c4ed98d1cce",
+    "afterSha256": "4290dcebd4bbca10118d64a06856ed2d6b72f1f95bc98280778c23776ba62451"
+  },
+  {
+    "file": "C:\\Users\\Admin\\Desktop\\internal\\klever\\klever-backend\\src\\services\\sessionControl.service.js",
+    "beforeSha256": "2816a72e201857f2379ef9d62a67bd4e717862424107529e167c6475b0ddb0a9",
+    "afterSha256": "814b1b0df2fc3abec76460fd189bbf094af1c2ecffc1947faddfcb5c23028ce4"
+  }
+]
