@@ -338,11 +338,11 @@ public class DeviceSynHandler : MonoBehaviour
             // being shown, and the welcome screen couldn't show without isSync=true).
             isOpenWelcomeScreen = false;
             UnityEngine.Debug.Log($"[DeviceSynHandler] Enabling WelcomeScene. WelcomeScene ref: {WelcomeScene != null}, gamification welcomeSessionScene ref: {((gamificationManager != null) ? (gamificationManager.welcomeSessionScene != null).ToString() : "null")}");
-            if (WelcomeScene != null) WelcomeScene.SetActive(true);
-            if (gamificationManager != null
-                && gamificationManager.welcomeSessionScene != null
-                && gamificationManager.welcomeSessionScene != WelcomeScene)
-                gamificationManager.welcomeSessionScene.SetActive(true);
+            //if (WelcomeScene != null) WelcomeScene.SetActive(true);
+            //if (gamificationManager != null
+            //    && gamificationManager.welcomeSessionScene != null
+            //    && gamificationManager.welcomeSessionScene != WelcomeScene)
+            //    gamificationManager.welcomeSessionScene.SetActive(true);
 
             // Step 2: Show the loading bar UI (hides black sphere, reveals progress bar).
             if (loadingBar != null)
@@ -420,11 +420,11 @@ public class DeviceSynHandler : MonoBehaviour
         isOpenWelcomeScreen = false;
         isStartButtonPressed = true;
 
-        if (WelcomeScene != null) WelcomeScene.SetActive(true);
-        if (gamificationManager != null
-            && gamificationManager.welcomeSessionScene != null
-            && gamificationManager.welcomeSessionScene != WelcomeScene)
-            gamificationManager.welcomeSessionScene.SetActive(true);
+        //if (WelcomeScene != null) WelcomeScene.SetActive(true);
+        //if (gamificationManager != null
+        //    && gamificationManager.welcomeSessionScene != null
+        //    && gamificationManager.welcomeSessionScene != WelcomeScene)
+        //    gamificationManager.welcomeSessionScene.SetActive(true);
 
         if (loadingBar != null)
         {
@@ -666,6 +666,8 @@ public class DeviceSynHandler : MonoBehaviour
 
     private void ShowPauseOverlay()
     {
+        AudioListener.pause = true;
+
         if (pauseOverlay != null)
         {
             pauseOverlay.SetActive(true);
@@ -684,6 +686,7 @@ public class DeviceSynHandler : MonoBehaviour
 
     private void HidePauseOverlay()
     {
+        AudioListener.pause = false;
         if (pauseOverlay != null)
         {
             pauseOverlay.SetActive(false);
@@ -845,9 +848,9 @@ public class DeviceSynHandler : MonoBehaviour
         if (!isStartButtonPressed || !isActiveDevice || !isSync || !isOpenWelcomeScreen) return;
         isLobby = false;
         isOpenWelcomeScreen = false;
-        if (WelcomeScene != null) WelcomeScene.SetActive(true);
-        if (gamificationManager != null && gamificationManager.welcomeSessionScene != null && gamificationManager.welcomeSessionScene != WelcomeScene)
-            gamificationManager.welcomeSessionScene.SetActive(true);
+        //if (WelcomeScene != null) WelcomeScene.SetActive(true);
+        //if (gamificationManager != null && gamificationManager.welcomeSessionScene != null && gamificationManager.welcomeSessionScene != WelcomeScene)
+        //    gamificationManager.welcomeSessionScene.SetActive(true);
         if (apiManager != null && apiManager.isLoadedResponse == false)
             apiManager.CallingClassVrExperiance();
     }
