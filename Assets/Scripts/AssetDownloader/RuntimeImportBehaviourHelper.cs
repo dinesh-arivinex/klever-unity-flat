@@ -47,7 +47,7 @@ public class RuntimeImportBehaviourHelper : MonoBehaviour
         string modelUrl = PlayerPrefs.GetString(StaticStrings.modelUrl);
         var details = new SimpleJSON.JSONObject();
         details["name"] = PlayerPrefs.GetString(StaticStrings.modelName);
-        Klass.Net.LiveViewPublisher.Instance?.ShowContent("model3d", modelUrl, modelUrl, details);
+        //Klass.Net.LiveViewPublisher.Instance?.ShowContent("model3d", modelUrl, modelUrl, details);
 
 
     }
