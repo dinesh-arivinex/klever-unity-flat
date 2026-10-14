@@ -12,6 +12,7 @@ mergeInto(LibraryManager.library, {
         iframeId: "native-webview-plugin-iframe",
         resizeHandlerRegistered: false,
         lastParams: {},
+        suspendedParams: null,
         navigationDepth: 0,
         pendingBackNavigation: false,
         reloadRequested: false,
@@ -98,21 +99,28 @@ mergeInto(LibraryManager.library, {
           if (!container) return;
           var paused = !!window.__nativeWebViewSessionPaused;
           var iframe = document.getElementById(this.iframeId);
-          var toolbar = document.getElementById(this.toolbarId);
-          // DOM WebViews sit above Unity's canvas. Hide and make their input
-          // inert without unloading the page or resetting simulation state.
-          [iframe, toolbar].forEach(function(element) {
-            if (!element) return;
-            element.inert = paused;
-            element.style.visibility = paused ? "hidden" : "";
-          });
+          // Hiding an iframe only blocks its input; its HTML/Web Audio keeps
+          // running independently of Unity. Discard the browsing context to
+          // stop all audio, including cross-origin and Web Audio simulations.
+          // Resume deliberately reloads the simulation (progress restarts).
+          if (paused && iframe) {
+            this.suspendedParams = this.lastParams;
+            this.removeIframe();
+            this.removeToolbar();
+          }
+          if (!paused && this.suspendedParams) {
+            var resumeParams = this.suspendedParams;
+            this.suspendedParams = null;
+            this.show(resumeParams);
+            return;
+          }
 
           var shield = document.getElementById(this.pauseShieldId);
           if (!paused) {
             if (shield && shield.parentNode) shield.parentNode.removeChild(shield);
             return;
           }
-          if (!iframe || container.style.display === "none") return;
+          if (!this.suspendedParams || container.style.display === "none") return;
           if (!shield) {
             shield = document.createElement("div");
             shield.id = this.pauseShieldId;
@@ -167,6 +175,9 @@ mergeInto(LibraryManager.library, {
           this.removeIframe();
           this.removeToolbar();
           this.hideContainer();
+          this.suspendedParams = null;
+          var shield = document.getElementById(this.pauseShieldId);
+          if (shield && shield.parentNode) shield.parentNode.removeChild(shield);
           this.navigationDepth = 0;
           this.pendingBackNavigation = false;
           this.reloadRequested = false;
@@ -176,7 +187,7 @@ mergeInto(LibraryManager.library, {
         isWebViewOpen: function() {
           var container = document.getElementById(this.containerId);
           var iframe = document.getElementById(this.iframeId);
-          return !!(container && iframe && container.style.display !== "none");
+          return !!(container && (iframe || this.suspendedParams) && container.style.display !== "none");
         },
 
         ensureBackGuard: function() {
@@ -224,6 +235,7 @@ mergeInto(LibraryManager.library, {
         },
 
         handleBackAction: function(iframe, requestedUrl, closeReason) {
+          if (window.__nativeWebViewSessionPaused) return false;
           if (!iframe) {
             this.closeWebView(closeReason || "WebView closed from back button");
             return false;
@@ -681,6 +693,7 @@ mergeInto(LibraryManager.library, {
           this.removeIframe();
           this.removeToolbar();
           this.lastParams = params || {};
+          this.suspendedParams = null;
           this.navigationDepth = 0;
           this.pendingBackNavigation = false;
           this.reloadRequested = false;
@@ -710,10 +723,19 @@ mergeInto(LibraryManager.library, {
               return;
             }
 
-            if (!useHtmlString && this.isLikelyIframeRestrictedHost(requestedUrl)) {
+            if (!useHtmlString && !window.__nativeWebViewSessionPaused && this.isLikelyIframeRestrictedHost(requestedUrl)) {
               this.openInNewTab(requestedUrl, "known iframe-restricted domain");
               return;
             }
+          }
+
+          // Never load an audible simulation when a pause arrived first.
+          if (window.__nativeWebViewSessionPaused) {
+            this.suspendedParams = params;
+            this.updateContainerBounds();
+            container.style.display = "block";
+            this.applySessionPause();
+            return;
           }
 
           var iframe = document.createElement("iframe");
@@ -725,6 +747,7 @@ mergeInto(LibraryManager.library, {
 
           var self = this;
           iframe.onload = function() {
+            if (document.getElementById(self.iframeId) !== iframe) return;
             if (self.pendingBackNavigation) {
               self.pendingBackNavigation = false;
               if (self.navigationDepth > 1) {
@@ -748,6 +771,7 @@ mergeInto(LibraryManager.library, {
           };
 
           iframe.onerror = function() {
+            if (document.getElementById(self.iframeId) !== iframe) return;
             if (requestedUrl) {
               var opened = self.openInNewTab(requestedUrl, "iframe load error fallback");
               if (opened) {

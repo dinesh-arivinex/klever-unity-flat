@@ -46,18 +46,16 @@ function setup() {
   return { library, window, document, elements, show };
 }
 
-test('pause blocks iframe, toolbar and keyboard focus; resume preserves the loaded document', () => {
+test('pause destroys the simulation document and shields input; resume reloads its original URL', () => {
   const { library, document, elements, show } = setup();
   library.NWV_Init('NativeBridge');
   show();
   const iframe = elements.get('native-webview-plugin-iframe');
-  const toolbar = elements.get('native-webview-plugin-toolbar');
   iframe.focus();
   library.NWV_SetSessionPaused(1);
-  assert.equal(iframe.inert, true);
-  assert.equal(iframe.style.visibility, 'hidden');
-  assert.equal(toolbar.inert, true);
-  assert.equal(toolbar.style.visibility, 'hidden');
+  assert.equal(elements.has('native-webview-plugin-iframe'), false);
+  assert.equal(iframe.parentNode, null);
+  assert.equal(elements.has('native-webview-plugin-toolbar'), false);
   const shield = elements.get('native-webview-plugin-pause-shield');
   assert.equal(shield.style.pointerEvents, 'auto');
   assert.equal(document.activeElement, shield);
@@ -67,29 +65,27 @@ test('pause blocks iframe, toolbar and keyboard focus; resume preserves the load
   library.NWV_SetSessionPaused(1);
   assert.equal(elements.get('native-webview-plugin-pause-shield'), shield);
   library.NWV_SetSessionPaused(0);
-  assert.equal(iframe.inert, false);
-  assert.equal(toolbar.inert, false);
-  assert.equal(iframe.style.visibility, '');
+  const reloaded = elements.get('native-webview-plugin-iframe');
+  assert.ok(reloaded);
+  assert.notEqual(reloaded, iframe);
+  assert.equal(reloaded.src, 'https://simulation.example/');
   assert.equal(elements.has('native-webview-plugin-pause-shield'), false);
-  assert.equal(elements.get('native-webview-plugin-iframe'), iframe);
-  assert.equal(iframe.src, 'https://simulation.example/');
+  assert.ok(elements.has('native-webview-plugin-toolbar'));
+  library.NWV_SetSessionPaused(0);
+  assert.equal(elements.get('native-webview-plugin-iframe'), reloaded);
 });
 
-test('pause before initialization also shields a newly opened or rebuilt simulation', () => {
+test('pause before initialization defers loading, including replacement content while paused', () => {
   const { library, elements, show } = setup();
   library.NWV_SetSessionPaused(1);
   library.NWV_Init('NativeBridge');
   show();
-  const original = elements.get('native-webview-plugin-iframe');
-  assert.equal(original.inert, true);
-  show();
-  const replacement = elements.get('native-webview-plugin-iframe');
-  assert.notEqual(replacement, original);
-  assert.equal(replacement.inert, true);
-  assert.equal(replacement.style.visibility, 'hidden');
+  assert.equal(elements.has('native-webview-plugin-iframe'), false);
+  library.NWV_ShowWebView(JSON.stringify({ url: 'https://simulation.example/replacement' }));
+  assert.equal(elements.has('native-webview-plugin-iframe'), false);
   assert.ok(elements.has('native-webview-plugin-pause-shield'));
   library.NWV_SetSessionPaused(0);
-  assert.equal(replacement.inert, false);
+  assert.equal(elements.get('native-webview-plugin-iframe').src, 'https://simulation.example/replacement');
 });
 
 test('close while paused stays closed on resume and reopening starts interactive', () => {
@@ -103,5 +99,59 @@ test('close while paused stays closed on resume and reopening starts interactive
   assert.equal(elements.has('native-webview-plugin-pause-shield'), false);
   assert.equal(elements.get('native-webview-plugin-container').style.display, 'none');
   show();
-  assert.equal(elements.get('native-webview-plugin-iframe').inert, false);
+  assert.equal(elements.get('native-webview-plugin-iframe').src, 'https://simulation.example/');
+});
+
+test('inline HTML is unloaded on pause and restored only on resume', () => {
+  const { library, elements } = setup();
+  library.NWV_Init('NativeBridge');
+  const html = '<audio autoplay loop src="tone.wav"></audio>';
+  library.NWV_ShowWebView(JSON.stringify({ shouldLoadHtmlString: true, htmlString: html }));
+  const iframe = elements.get('native-webview-plugin-iframe');
+  assert.equal(iframe.srcdoc, html);
+  library.NWV_SetSessionPaused(1);
+  assert.equal(iframe.parentNode, null);
+  assert.equal(elements.has('native-webview-plugin-iframe'), false);
+  library.NWV_SetSessionPaused(0);
+  assert.equal(elements.get('native-webview-plugin-iframe').srcdoc, html);
+});
+
+test('late load/error callbacks from an unloaded simulation do not report success or open a tab', () => {
+  const { library, window, elements, show } = setup();
+  library.NWV_Init('NativeBridge');
+  show();
+  const iframe = elements.get('native-webview-plugin-iframe');
+  const reports = [];
+  window.__nativeWebViewBridge.sendToUnity = (...args) => reports.push(args);
+  window.open = () => { throw new Error('Unloaded frame must not open a tab'); };
+  library.NWV_SetSessionPaused(1);
+  iframe.onload();
+  iframe.onerror();
+  assert.deepEqual(reports, []);
+  assert.equal(window.__nativeWebViewBridge.navigationDepth, 0);
+});
+
+test('browser back while paused does not discard the pending simulation', () => {
+  const { library, window, elements, show } = setup();
+  library.NWV_Init('NativeBridge');
+  show();
+  library.NWV_SetSessionPaused(1);
+  const bridge = window.__nativeWebViewBridge;
+  assert.equal(bridge.isWebViewOpen(), true);
+  bridge.handleBackAction(null, '', 'back');
+  library.NWV_SetSessionPaused(0);
+  assert.equal(elements.get('native-webview-plugin-iframe').src, 'https://simulation.example/');
+});
+
+test('restricted-host fallback cannot open an external tab while already paused', () => {
+  const { library, window, elements } = setup();
+  library.NWV_Init('NativeBridge');
+  const opened = [];
+  window.open = url => { opened.push(url); return {}; };
+  library.NWV_SetSessionPaused(1);
+  library.NWV_ShowWebView(JSON.stringify({ url: 'https://www.google.com/' }));
+  assert.deepEqual(opened, []);
+  assert.equal(elements.has('native-webview-plugin-iframe'), false);
+  library.NWV_SetSessionPaused(0);
+  assert.deepEqual(opened, ['https://www.google.com/']);
 });
