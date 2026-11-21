@@ -90,7 +90,7 @@ public class DeviceSynHandler : MonoBehaviour
     private string experienceId = "";
     private static string pendingStartPayload;
     private static string lastControlCommand;
-    public static bool WaitForConsoleStart { get; private set; }
+    public static bool WaitForConsoleStart { get; private set; } = true;
     private bool reloadingScene;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -98,7 +98,7 @@ public class DeviceSynHandler : MonoBehaviour
     {
         pendingStartPayload = null;
         lastControlCommand = null;
-        WaitForConsoleStart = false;
+        WaitForConsoleStart = true;
     }
 
     public static DeviceSynHandler Instance { get; private set; }
@@ -406,41 +406,6 @@ public class DeviceSynHandler : MonoBehaviour
                 }
             }
         }
-    }
-
-    public void TriggerWebGLAutoStart()
-    {
-        if (isOpenGame) return;
-
-        UnityEngine.Debug.Log("[DeviceSynHandler] Triggering WebGL auto-start experience activation UI flow.");
-        isOpening = true;
-        isLobby = false;
-        _downloadProgress = 0;
-        PublishStateIfChanged(force: true);
-        isOpenWelcomeScreen = false;
-        isStartButtonPressed = true;
-
-        //if (WelcomeScene != null) WelcomeScene.SetActive(true);
-        //if (gamificationManager != null
-        //    && gamificationManager.welcomeSessionScene != null
-        //    && gamificationManager.welcomeSessionScene != WelcomeScene)
-        //    gamificationManager.welcomeSessionScene.SetActive(true);
-
-        if (loadingBar != null)
-        {
-            try
-            {
-                UnityEngine.Debug.Log("[DeviceSynHandler] Calling loadingBar.SynchDevice() for WebGL auto-start.");
-                loadingBar.SynchDevice();
-            }
-            catch (System.Exception e) { UnityEngine.Debug.LogWarning("[DeviceSynHandler] LoadingBar.SynchDevice error (non-fatal): " + e.Message); }
-        }
-        else
-        {
-            UnityEngine.Debug.LogWarning("[DeviceSynHandler] loadingBar reference is null!");
-        }
-
-        isOpenGame = true;
     }
 
     private void HandleCommand(JSONNode cmd)

@@ -155,22 +155,9 @@ public class API : MonoBehaviour
                     spaceData = null;
                 }
 
-                bool hasValidExperience = (spaceData != null && spaceData.Count > 0 && spaceData[0] != null && spaceData[0]["session"] != null);
-
-                // Determine if we should auto-start on WebGL
-                bool isWebGl = false;
-#if UNITY_WEBGL
-                isWebGl = true;
-#endif
-                if (Application.platform == RuntimePlatform.WebGLPlayer)
-                {
-                    isWebGl = true;
-                }
-
-                bool shouldBypassForWebGl = isWebGl && hasValidExperience && !DeviceSynHandler.WaitForConsoleStart;
-
-                UnityEngine.Debug.Log($"[API] State Validation check: isOpenWelcomeScreen={DeviceSynHandler.isOpenWelcomeScreen} (needed: false), isLoadedResponse={isLoadedResponse} (needed: false), shouldBypassForWebGl={shouldBypassForWebGl}");
-                if (!DeviceSynHandler.WaitForConsoleStart && (DeviceSynHandler.isOpenWelcomeScreen == false || shouldBypassForWebGl) && isLoadedResponse != true)
+                // Prepared lesson data must wait for the teacher's start signal.
+                if (!DeviceSynHandler.WaitForConsoleStart &&
+                    !DeviceSynHandler.isOpenWelcomeScreen && !isLoadedResponse)
                 {
                     UnityEngine.Debug.Log("[API] State validation succeeded. Parsing experience data...");
                     if (spaceData == null || spaceData.Count == 0 || spaceData[0] == null)
@@ -192,32 +179,6 @@ public class API : MonoBehaviour
                     DeviceIDManager deviceIDManager = DeviceID.GetComponent<DeviceIDManager>();
                     deviceIDManager.ToggleFunction(true);
                     deviceIDManager.gameObject.SetActive(false);
-                    // LoadingScene.SetActive(true);
-                    JSONNode session = spaceData[0]["session"];
-                    string sessionId = session != null ? session["_id"].Value : "";
-                    string sessionTimeAndDate = session != null ? session["sessionTimeAndDate"].Value : "";
-
-                    // If we bypassed validation because of WebGL, we trigger the autostart UI flow on the sync handler
-                    if (shouldBypassForWebGl && DeviceSynHandler.isOpenWelcomeScreen)
-                    {
-                        var synHandler = GameManager.Instance.deviceSynHandler != null ? GameManager.Instance.deviceSynHandler : FindObjectOfType<DeviceSynHandler>();
-                        if (synHandler != null)
-                        {
-                            UnityEngine.Debug.Log("[API] Bypassing lobby waiting state on WebGL. Triggering autostart UI flow.");
-                            synHandler.TriggerWebGLAutoStart();
-                        }
-                    }
-
-                    // Initialize StudentPerformance on WebGL if not already done
-                    if (shouldBypassForWebGl && GameManager.Instance.gamificationManager != null)
-                    {
-                        string schoolId = (session != null && session["teacherId"] != null) ? session["teacherId"]["schoolId"].Value : "";
-                        string gradeId = session != null ? session["grade"].Value : "";
-                        string sectionId = ""; // No section ID in the REST response session payload
-
-                        UnityEngine.Debug.Log($"[API] WebGL auto-start: Initializing Student Performance references with SessionID={sessionId}, SchoolID={schoolId}, GradeID={gradeId}");
-                        GameManager.Instance.gamificationManager.StudentPerformance(sessionId, schoolId, sectionId, gradeId);
-                    }
 
                     JSONArray assessments = spaceData[0]["assessments"].AsArray;
                     if (assessments != null && assessments.Count > 0)
